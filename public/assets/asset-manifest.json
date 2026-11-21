@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "mode": "prototype-placeholders",
+  "assets": [
+    {
+      "id": "mascot.idle",
+      "sourcePath": null,
+      "runtimePath": null,
+      "placeholderFactory": "placeholder-mascot",
+      "replaceable": true,
+      "note": "抽象占位，不代表正式小伴龙造型"
+    },
+    {
+      "id": "item.b1.tree01",
+      "sourcePath": null,
+      "runtimePath": null,
+      "placeholderFactory": "placeholder-tree",
+      "replaceable": true,
+      "note": "纵向切片唯一建造物占位"
+    }
+  ]
+}

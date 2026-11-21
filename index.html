@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#c3d8ec" />
+    <meta name="description" content="《拉钩岛》儿童专注契约 H5 游戏原型" />
+    <title>拉钩岛 · 可玩原型</title>
+  </head>
+  <body>
+    <div id="app">
+      <main id="game-shell" aria-label="拉钩岛游戏">
+        <div id="game-canvas" aria-hidden="true"></div>
+        <div id="game-ui"></div>
+      </main>
+      <section id="rotate-notice" aria-live="polite">
+        <div class="rotate-icon">↻</div>
+        <h1>请把设备横过来</h1>
+        <p>小伴龙在拉钩岛等你。</p>
+      </section>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
