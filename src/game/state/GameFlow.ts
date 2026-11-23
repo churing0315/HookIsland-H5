@@ -1,5 +1,8 @@
-import { DAILY_PLANT_LIMIT, FAST_MODE } from '../config';
+import { DAILY_FOCUS_LIMIT, DAILY_PLANT_LIMIT, FAST_MODE } from '../config';
+import { getAsset } from '../data/assetCatalog';
 import { TASKS } from '../data/tasks';
+import { resolveStoredMapStage, unlockedTileSets } from '../map/IslandExpansionService';
+import { gridToWorldCenter } from '../map/mapConfig';
 import { loadGameData, saveGameData } from '../storage';
 import type { GameSnapshot, PlacedItem } from '../types';
 
@@ -26,6 +29,8 @@ export class GameFlow {
       focus: null,
       data: loadGameData(),
       fastMode: FAST_MODE,
+      selectedAssetId: 'tree_round',
+      celebrationKind: 'build',
     };
   }
 
@@ -40,7 +45,8 @@ export class GameFlow {
   }
 
   openTaskSelect(): void {
-    if (this.snapshot.data.daily.planted >= DAILY_PLANT_LIMIT) return;
+    const daily = this.snapshot.data.daily;
+    if (daily.planted >= DAILY_PLANT_LIMIT && daily.bonusMedalAwarded) return;
     this.patch({ screen: 'task-select' });
   }
 
@@ -88,26 +94,39 @@ export class GameFlow {
     return Math.max(0, Math.min(1, focus.remainingMs / focus.totalMs));
   }
 
-  commitPlacement(x: number, y: number): void {
+  commitPlacement(assetId: string, gridX: number, gridY: number): void {
     const task = TASKS.find((item) => item.id === this.snapshot.selectedTaskId);
     const minutes = this.snapshot.selectedMinutes;
     if (this.snapshot.screen !== 'build' || !task || !minutes) return;
 
+    const asset = getAsset(assetId);
+    const center = gridToWorldCenter(gridX, gridY, asset.footprint);
     const placed: PlacedItem = {
       id: createId(),
-      type: 'placeholder-tree',
-      x,
-      y,
+      type: asset.runtimeTextureKey,
+      assetId,
+      gridX,
+      gridY,
+      footprint: asset.footprint,
+      x: center.x,
+      y: center.y,
       taskId: task.id,
       taskName: task.name,
       minutes,
       createdAt: new Date().toISOString(),
+      mapVersion: 2,
     };
+    const totalPlaced = this.snapshot.data.totalPlaced + 1;
+    const mapStage = resolveStoredMapStage(this.snapshot.data.mapStage, totalPlaced);
     const data = {
       ...this.snapshot.data,
+      totalPlaced,
+      mapStage,
+      unlockedTileSet: unlockedTileSets(mapStage),
       daily: {
         ...this.snapshot.data.daily,
         planted: Math.min(DAILY_PLANT_LIMIT, this.snapshot.data.daily.planted + 1),
+        completed: Math.min(DAILY_FOCUS_LIMIT, this.snapshot.data.daily.completed + 1),
       },
       placedItems: [...this.snapshot.data.placedItems, placed],
     };
@@ -118,6 +137,7 @@ export class GameFlow {
       selectedTaskId: null,
       selectedMinutes: null,
       focus: null,
+      celebrationKind: 'build',
     });
   }
 
@@ -155,8 +175,33 @@ export class GameFlow {
     if (focus.remainingMs <= 0) {
       if (this.focusTimer !== null) window.clearInterval(this.focusTimer);
       this.focusTimer = null;
-      this.patch({ screen: 'celebration' });
-      this.transitionTimer = window.setTimeout(() => this.patch({ screen: 'build' }), 3_000);
+      const isMedalFocus =
+        this.snapshot.data.daily.planted >= DAILY_PLANT_LIMIT && !this.snapshot.data.daily.bonusMedalAwarded;
+      if (isMedalFocus) {
+        const data = {
+          ...this.snapshot.data,
+          daily: {
+            ...this.snapshot.data.daily,
+            completed: DAILY_FOCUS_LIMIT,
+            bonusMedalAwarded: true,
+          },
+        };
+        saveGameData(data);
+        this.patch({ screen: 'celebration', celebrationKind: 'medal', data });
+        this.transitionTimer = window.setTimeout(
+          () =>
+            this.patch({
+              screen: 'island',
+              selectedTaskId: null,
+              selectedMinutes: null,
+              focus: null,
+            }),
+          3_000,
+        );
+      } else {
+        this.patch({ screen: 'celebration', celebrationKind: 'build' });
+        this.transitionTimer = window.setTimeout(() => this.patch({ screen: 'build' }), 3_000);
+      }
     }
   }
 

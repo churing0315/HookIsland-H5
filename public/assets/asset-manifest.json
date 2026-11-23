@@ -1,22 +1,39 @@
 {
-  "version": 1,
-  "mode": "prototype-placeholders",
+  "version": 2,
+  "mode": "v2-map-slice-plus-placeholders",
   "assets": [
     {
-      "id": "mascot.idle",
-      "sourcePath": null,
-      "runtimePath": null,
-      "placeholderFactory": "placeholder-mascot",
-      "replaceable": true,
-      "note": "抽象占位，不代表正式小伴龙造型"
+      "id": "ui.mascot.xiaobanlong",
+      "sourcePath": "slices1122.zip/slices/xbl01.png",
+      "runtimePath": "/assets/v2/mascot-xiaobanlong.png",
+      "replaceable": false,
+      "note": "用户提供的正式角色切片；保持造型与颜色"
     },
     {
-      "id": "item.b1.tree01",
-      "sourcePath": null,
+      "id": "ui.mascot.cloud",
+      "sourcePath": "slices1122.zip/slices/cloud.png",
+      "runtimePath": "/assets/v2/mascot-cloud.png",
+      "replaceable": false
+    },
+    {
+      "id": "ui.pinky.button",
+      "sourcePath": "slices1122.zip/slices/按钮.png",
+      "runtimePath": "/assets/v2/btn-pinky.png",
+      "replaceable": false
+    },
+    {
+      "id": "ui.back.button",
+      "sourcePath": "slices1122.zip/slices/btn-back.png",
+      "runtimePath": "/assets/v2/btn-back.png",
+      "replaceable": false
+    },
+    {
+      "id": "catalog.v2.36-items",
+      "sourcePath": "src/game/data/assetCatalog.ts",
       "runtimePath": null,
       "placeholderFactory": "placeholder-tree",
       "replaceable": true,
-      "note": "纵向切片唯一建造物占位"
+      "note": "36件 footprint/terrain/unlock 数据已建立，本轮只接入圆冠树占位视觉"
     }
   ]
 }
