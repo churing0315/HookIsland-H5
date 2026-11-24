@@ -42,7 +42,7 @@ export const TASK_ASSETS = {
   confirmPanel: `${ROOT}/confirm-panel.png`,
   confirmLabel: `${ROOT}/confirm-label.png`,
   mascot: `${ROOT}/mascot.png`,
-  hourglass: `${ROOT}/hourglass.png`,
+  confirmTimeIcon: `${ROOT}/confirm-time-icon.png`,
 } as const;
 
 export function findTaskVisual(taskId: string | null): TaskVisualConfig | undefined {

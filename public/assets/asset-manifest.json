@@ -47,10 +47,11 @@
         "confirm-panel.png",
         "confirm-label.png",
         "mascot.png",
-        "hourglass.png"
+        "hourglass.png",
+        "confirm-time-icon.png"
       ],
       "replaceable": false,
-      "note": "用户提供的正式任务页切图；hourglass.png 从正式确认视觉稿无损裁切"
+      "note": "用户提供的正式任务页切图；确认页使用独立 task_confirm_timeicon.png，旧 hourglass.png 仅为历史兼容资源"
     },
     {
       "id": "task-v2.illustrations",

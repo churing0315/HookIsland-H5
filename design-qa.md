@@ -95,4 +95,13 @@
    - Browser evidence: 惯性采样无来回跳变；连续点击四个时钟后仅一个摆动；空闲进度 opacity=0、长按中 opacity=1、取消后恢复 0；控制台 0 warning / 0 error。
    - No actionable P0/P1/P2 findings remained.
 
+4. User layout correction pass（2026-11-24）
+   - [P1] `task_pannel` 上拉结束后底边露出背景色；轮播可视区不足以容纳选中卡和独立光斑。
+   - [P1] 选中光斑被错误居中并放大；任务卡、时钟仍显示桌面手型反馈。
+   - [P1] 确认页沿用视觉稿派生沙漏而未使用独立 `task_confirm_timeicon`；长按按钮仍有右侧投影。
+   - Fix: 底板下沉到安全区，任务根容器改为不可滚动 `overflow: clip`，轮播可视区增高；光斑按视觉稿缩小并右移。
+   - Fix: 两类选项 cursor 均为 default；确认页接入 63×68 独立沙漏并等比显示；空闲态与完成态均移除右侧投影。
+   - Browser evidence: 面板上拉中间帧及落位帧无露底；8 张卡与 4 个时钟完整显示；根容器 scrollTop=0；正式沙漏路径正确；按钮 box-shadow=none；控制台 0 warning / 0 error。
+   - No actionable P0/P1/P2 findings remained.
+
 final result: passed
