@@ -451,14 +451,17 @@ button {
   background: transparent;
   cursor: pointer;
   transform-origin: 50% 54%;
-  transition: transform 80ms linear;
   animation: task-card-pop 420ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
   animation-delay: calc(var(--entry-order) * 70ms);
-  will-change: transform, scale;
+  will-change: transform;
 }
 
-.task-v2-carousel-viewport.is-dragging .task-v2-card {
-  transition: none;
+.task-v2-card-press-surface {
+  position: absolute;
+  inset: 0;
+  display: block;
+  transform-origin: 50% 54%;
+  backface-visibility: hidden;
 }
 
 .task-v2-card-base,
@@ -475,13 +478,19 @@ button {
   height: 100%;
 }
 
+.task-v2-card-base-default,
+.task-v2-card-base-selected,
+.task-v2-card-spot {
+  transition: opacity 110ms ease-out;
+  backface-visibility: hidden;
+}
+
 .task-v2-card-base-selected,
 .task-v2-card-spot {
   opacity: 0;
 }
 
 .task-v2-card-spot {
-  z-index: -1;
   bottom: -18px;
   left: 50%;
   width: 40px;
@@ -562,6 +571,15 @@ button {
   transform: translateX(0);
 }
 
+.task-v2-duration-wobble-surface,
+.task-v2-duration-press-surface {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: center;
+  backface-visibility: hidden;
+}
+
 .task-v2-duration img {
   display: block;
   width: 100%;
@@ -570,9 +588,8 @@ button {
   pointer-events: none;
 }
 
-.task-v2-duration.is-selected {
-  animation: duration-pop 400ms cubic-bezier(0.34, 1.56, 0.64, 1) both,
-    duration-wobble 600ms 420ms ease-in-out infinite;
+.task-v2-duration.is-selected .task-v2-duration-wobble-surface {
+  animation: duration-wobble 600ms ease-in-out infinite;
 }
 
 .task-v2-duration-root.is-confirming {
@@ -582,6 +599,11 @@ button {
 
 .task-v2-duration-root.is-confirming .task-v2-duration {
   animation: none;
+}
+
+.task-v2-duration-root.is-confirming .task-v2-duration-wobble-surface {
+  animation: none;
+  rotate: 0deg;
 }
 
 .task-v2-duration.is-confirm-away {
@@ -687,7 +709,7 @@ button {
 
 .task-v2-confirm-mascot {
   position: absolute;
-  z-index: 1;
+  z-index: 3;
   bottom: 31px;
   left: 114px;
   width: 111px;
@@ -761,10 +783,11 @@ button {
   overflow: visible;
   border: 6px solid white;
   border-radius: 999px;
-  background: #64d273;
-  box-shadow: 7px 0 0 #8fff3f;
+  background: #fffdf3;
+  box-shadow: 7px 0 0 #e5dbb8;
   cursor: pointer;
   touch-action: none;
+  transition: background-color 160ms ease, box-shadow 160ms ease;
 }
 
 .task-v2-hold-button > img {
@@ -775,6 +798,7 @@ button {
   width: 57px;
   height: auto;
   transform: translate(-58%, -50%);
+  filter: brightness(0) saturate(100%) invert(17%) sepia(17%) saturate(916%) hue-rotate(338deg) brightness(91%) contrast(94%);
   pointer-events: none;
 }
 
@@ -784,7 +808,7 @@ button {
   top: 50%;
   left: calc(50% + 32px);
   transform: translateY(-55%);
-  color: white;
+  color: #392820;
   font-size: 36px;
   font-weight: 1000;
   pointer-events: none;
@@ -797,7 +821,14 @@ button {
   width: calc(100% + 14px);
   height: calc(100% + 14px);
   overflow: visible;
+  opacity: 0;
   pointer-events: none;
+}
+
+.task-v2-hold-button.is-holding .task-v2-hold-progress,
+.task-v2-hold-button.is-resetting .task-v2-hold-progress,
+.task-v2-hold-button.is-complete .task-v2-hold-progress {
+  opacity: 1;
 }
 
 .task-v2-hold-progress rect {
@@ -814,7 +845,16 @@ button {
 }
 
 .task-v2-hold-button.is-complete {
+  background: #64d273;
   box-shadow: 0 0 0 5px rgba(148, 251, 72, 0.45), 7px 0 0 #8fff3f;
+}
+
+.task-v2-hold-button.is-complete > img {
+  filter: none;
+}
+
+.task-v2-hold-button.is-complete .task-v2-hold-exclamation {
+  color: white;
 }
 
 .pressable {

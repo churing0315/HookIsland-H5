@@ -1,14 +1,14 @@
-export function bindPressFeedback(element: HTMLElement): () => void {
+export function bindPressFeedback(element: HTMLElement, visual: HTMLElement = element): () => void {
   let reboundTimer: number | null = null;
   const press = (): void => {
     if (reboundTimer !== null) window.clearTimeout(reboundTimer);
-    element.classList.remove('is-rebounding');
-    element.classList.add('is-pressed');
+    visual.classList.remove('is-rebounding');
+    visual.classList.add('is-pressed');
   };
   const release = (): void => {
-    element.classList.remove('is-pressed');
-    element.classList.add('is-rebounding');
-    reboundTimer = window.setTimeout(() => element.classList.remove('is-rebounding'), 220);
+    visual.classList.remove('is-pressed');
+    visual.classList.add('is-rebounding');
+    reboundTimer = window.setTimeout(() => visual.classList.remove('is-rebounding'), 220);
   };
   element.addEventListener('pointerdown', press);
   element.addEventListener('pointerup', release);

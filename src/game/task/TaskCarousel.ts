@@ -1,5 +1,5 @@
 import { TASK_ASSETS, TASK_VISUALS, type TaskVisualConfig } from './taskConfig';
-import { cardTiltDegrees, clampCarouselPosition, nearestCarouselIndex } from './carouselMath';
+import { cardTiltDegrees, clampCarouselPosition, nearestCarouselIndex, nextVisualSelectionIndex } from './carouselMath';
 import { bindPressFeedback } from './pressFeedback';
 
 interface CarouselCallbacks {
@@ -11,6 +11,7 @@ export class TaskCarousel {
   private readonly cleanup: Array<() => void> = [];
   private position: number;
   private selectedIndex: number;
+  private visualSelectedIndex: number;
   private dragging = false;
   private pointerId: number | null = null;
   private startX = 0;
@@ -30,6 +31,7 @@ export class TaskCarousel {
   ) {
     const configuredIndex = TASK_VISUALS.findIndex((task) => task.id === selectedTaskId);
     this.selectedIndex = configuredIndex >= 0 ? configuredIndex : TASK_VISUALS.findIndex((task) => task.id === 'book');
+    this.visualSelectedIndex = this.selectedIndex;
     this.position = this.selectedIndex;
     this.build();
     this.bindInput();
@@ -40,6 +42,7 @@ export class TaskCarousel {
     const index = TASK_VISUALS.findIndex((task) => task.id === taskId);
     if (index < 0 || index === this.selectedIndex) return;
     this.selectedIndex = index;
+    this.visualSelectedIndex = index;
     this.position = index;
     this.render();
   }
@@ -62,24 +65,26 @@ export class TaskCarousel {
     TASK_VISUALS.forEach((task, index) => {
       const card = document.createElement('button');
       card.type = 'button';
-      card.className = 'task-v2-card pressable';
+      card.className = 'task-v2-card';
       card.dataset.taskId = task.id;
       card.setAttribute('aria-label', `选择${task.name}`);
       card.style.setProperty('--entry-order', String(Math.abs(index - this.selectedIndex)));
-      card.innerHTML = `
+      card.innerHTML = `<span class="task-v2-card-press-surface pressable">
         <img class="task-v2-card-spot" src="${TASK_ASSETS.selectedSpot}" alt="">
         <img class="task-v2-card-base task-v2-card-base-default" src="${TASK_ASSETS.cardDefault}" alt="">
         <img class="task-v2-card-base task-v2-card-base-selected" src="${TASK_ASSETS.cardSelected}" alt="">
         <img class="task-v2-card-art" src="${task.illustration}" alt="">
         <span class="task-v2-card-name">${task.name}</span>
-      `;
+      </span>`;
       const click = (): void => {
         if (performance.now() - this.lastPointerSelectionAt < 120 || this.moved || this.dragging) return;
         this.selectIndex(index, true);
       };
       card.addEventListener('click', click);
       this.cleanup.push(() => card.removeEventListener('click', click));
-      this.cleanup.push(bindPressFeedback(card));
+      const pressSurface = card.querySelector<HTMLElement>('.task-v2-card-press-surface');
+      if (!pressSurface) throw new Error('Missing task card press surface');
+      this.cleanup.push(bindPressFeedback(card, pressSurface));
       this.viewport.append(card);
       this.cards.push(card);
     });
@@ -141,6 +146,7 @@ export class TaskCarousel {
   private selectIndex(index: number, playVoice: boolean): void {
     this.stopAnimation();
     this.selectedIndex = index;
+    this.visualSelectedIndex = index;
     this.callbacks.onSelected(TASK_VISUALS[index], playVoice);
     this.springTo(index, false);
   }
@@ -180,6 +186,7 @@ export class TaskCarousel {
       if (Math.abs(displacement) < 0.0015 && Math.abs(velocity) < 0.012) {
         this.position = target;
         this.selectedIndex = target;
+        this.visualSelectedIndex = target;
         this.render();
         this.animationFrame = null;
         if (notify) this.callbacks.onSelected(TASK_VISUALS[target], false);
@@ -191,14 +198,15 @@ export class TaskCarousel {
   }
 
   private render(): void {
-    const nearest = nearestCarouselIndex(this.position, TASK_VISUALS.length);
+    this.visualSelectedIndex = nextVisualSelectionIndex(this.position, this.visualSelectedIndex, TASK_VISUALS.length);
     this.cards.forEach((card, index) => {
       const relative = index - this.position;
       const offset = relative * this.cardSpacing();
-      const selected = index === nearest;
+      const selected = index === this.visualSelectedIndex;
+      const emphasis = Math.max(0, 1 - Math.abs(relative));
       card.classList.toggle('is-selected', selected);
       card.style.zIndex = String(20 - Math.round(Math.abs(relative)));
-      card.style.transform = `translate3d(calc(-50% + ${offset}px), 0, 0) rotate(${cardTiltDegrees(relative)}deg) scale(${selected ? 1.1 : 1})`;
+      card.style.transform = `translate3d(calc(-50% + ${offset}px), 0, 0) rotate(${cardTiltDegrees(relative)}deg) scale(${1 + emphasis * 0.1})`;
       card.setAttribute('aria-pressed', String(index === this.selectedIndex));
     });
   }

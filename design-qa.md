@@ -85,4 +85,14 @@
    - 核心尺寸改为固定 812×375 设计画布并按容器等比缩放，同一比例在桌面、手机横屏和旧版 WebView 保持一致。
    - No actionable P0/P1/P2 findings remained.
 
+3. User feedback correction pass（2026-11-24）
+   - [P1] 任务卡位移动画与每帧 `transform` 更新叠加，中心临界点可能发生选中态闪烁。
+   - [P1] 时钟进场、摆动和按压回弹共用同一动画层，点击时可能重播进场动画。
+   - [P1] `task_xbl` 被错误放在确认面板下层；视觉稿显示角色完整位于面板上层并压住左下边缘。
+   - [P1] 长按按钮默认绿色背景与绿色投影会在 0% 进度时提前显示完成色。
+   - Fix: 轮播移除逐帧 transform 过渡，增加 0.6 卡位选中迟滞和连续中心缩放；按压反馈、时钟摆动与进场动画拆为独立嵌套层。
+   - Fix: `task_xbl` 提升到确认卡上层；按钮 0% 使用米白空闲态，绿色只在长按进度描边与完成态出现。
+   - Browser evidence: 惯性采样无来回跳变；连续点击四个时钟后仅一个摆动；空闲进度 opacity=0、长按中 opacity=1、取消后恢复 0；控制台 0 warning / 0 error。
+   - No actionable P0/P1/P2 findings remained.
+
 final result: passed

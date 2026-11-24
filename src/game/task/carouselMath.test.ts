@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cardTiltDegrees, clampCarouselPosition, nearestCarouselIndex } from './carouselMath';
+import { cardTiltDegrees, clampCarouselPosition, nearestCarouselIndex, nextVisualSelectionIndex } from './carouselMath';
 
 describe('task carousel math', () => {
   it('clamps a non-looping carousel to both ends', () => {
@@ -20,5 +20,13 @@ describe('task carousel math', () => {
     expect(nearestCarouselIndex(2.49, 8)).toBe(2);
     expect(nearestCarouselIndex(2.51, 8)).toBe(3);
     expect(nearestCarouselIndex(99, 8)).toBe(7);
+  });
+
+  it('uses hysteresis so selection cannot flicker around a midpoint', () => {
+    expect(nextVisualSelectionIndex(3.51, 3, 8)).toBe(3);
+    expect(nextVisualSelectionIndex(3.59, 3, 8)).toBe(3);
+    expect(nextVisualSelectionIndex(3.61, 3, 8)).toBe(4);
+    expect(nextVisualSelectionIndex(3.49, 4, 8)).toBe(4);
+    expect(nextVisualSelectionIndex(3.39, 4, 8)).toBe(3);
   });
 });

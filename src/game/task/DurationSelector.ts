@@ -49,18 +49,20 @@ export class DurationSelector {
     DURATION_VISUALS.forEach((duration, index) => {
       const button = document.createElement('button');
       button.type = 'button';
-      button.className = 'task-v2-duration pressable';
+      button.className = 'task-v2-duration';
       button.style.setProperty('--duration-index', String(index));
       button.style.setProperty('--confirm-shift', `${(1.5 - index) * this.root.clientWidth * 0.2044}px`);
       button.setAttribute('aria-label', `选择${duration.minutes}分钟`);
-      button.innerHTML = `<img src="${duration.image}" alt="${duration.minutes}分钟">`;
+      button.innerHTML = `<span class="task-v2-duration-wobble-surface"><span class="task-v2-duration-press-surface pressable"><img src="${duration.image}" alt="${duration.minutes}分钟"></span></span>`;
       const click = (): void => {
         this.setSelected(duration.minutes);
         this.callbacks.onSelected(duration);
       };
       button.addEventListener('click', click);
       this.cleanup.push(() => button.removeEventListener('click', click));
-      this.cleanup.push(bindPressFeedback(button));
+      const pressSurface = button.querySelector<HTMLElement>('.task-v2-duration-press-surface');
+      if (!pressSurface) throw new Error('Missing duration press surface');
+      this.cleanup.push(bindPressFeedback(button, pressSurface));
       this.root.append(button);
       this.buttons.set(duration.minutes, button);
     });
