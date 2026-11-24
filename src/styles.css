@@ -340,6 +340,15 @@ button {
   -webkit-user-select: none;
 }
 
+.task-v2-design {
+  --task-scale: 1;
+  position: absolute;
+  width: 812px;
+  height: 375px;
+  transform: scale(var(--task-scale));
+  transform-origin: top left;
+}
+
 .task-v2 button {
   -webkit-user-drag: none;
 }
@@ -347,27 +356,27 @@ button {
 .task-v2-cloud {
   position: absolute;
   z-index: 0;
-  width: 11.33cqw;
+  width: 92px;
   opacity: 0.26;
   filter: brightness(2.2) saturate(0.2);
   pointer-events: none;
 }
 
 .task-v2-cloud.cloud-a {
-  top: 11.2cqh;
-  right: 6.77cqw;
+  top: 42px;
+  right: 55px;
   transform: scale(1.25);
 }
 
 .task-v2-cloud.cloud-b {
-  top: 19.73cqh;
-  left: 4.68cqw;
+  top: 74px;
+  left: 38px;
   transform: scale(0.75);
 }
 
 .task-v2-cloud.cloud-c {
-  top: 62.93cqh;
-  left: 34.73cqw;
+  top: 236px;
+  left: 282px;
   transform: scale(0.54);
 }
 
@@ -375,7 +384,7 @@ button {
   position: absolute;
   z-index: 2;
   top: -2%;
-  width: 15.64cqw;
+  width: 127px;
   height: 104%;
   opacity: 0.2;
   pointer-events: none;
@@ -396,10 +405,10 @@ button {
 .task-v2-back {
   position: absolute;
   z-index: 60;
-  top: 4cqh;
-  left: 2.34cqw;
-  width: 5.42cqw;
-  height: 11.73cqh;
+  top: 15px;
+  left: 19px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   background: transparent;
   cursor: pointer;
@@ -418,10 +427,10 @@ button {
 .task-v2-carousel-viewport {
   position: absolute;
   z-index: 10;
-  top: 13.33cqh;
+  top: 50px;
   left: 0;
   width: 100%;
-  height: 52.8cqh;
+  height: 198px;
   overflow: hidden;
   cursor: grab;
   touch-action: pan-y;
@@ -433,10 +442,10 @@ button {
 
 .task-v2-card {
   position: absolute;
-  top: 1.07cqh;
+  top: 4px;
   left: 50%;
-  width: 17.86cqw;
-  height: 46.93cqh;
+  width: 145px;
+  height: 176px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -473,10 +482,10 @@ button {
 
 .task-v2-card-spot {
   z-index: -1;
-  bottom: -4.8cqh;
+  bottom: -18px;
   left: 50%;
-  width: 4.93cqw;
-  height: 7.2cqh;
+  width: 40px;
+  height: 27px;
   transform: translateX(-50%);
 }
 
@@ -490,21 +499,21 @@ button {
 }
 
 .task-v2-card-art {
-  top: 4.27cqh;
-  left: 2.09cqw;
-  width: 13.67cqw;
-  height: 29.6cqh;
-  border-radius: 3.08cqw;
+  top: 16px;
+  left: 17px;
+  width: 111px;
+  height: 111px;
+  border-radius: 25px;
   object-fit: cover;
 }
 
 .task-v2-card-name {
   position: absolute;
-  right: 0.86cqw;
-  bottom: 4.8cqh;
-  left: 0.86cqw;
+  right: 7px;
+  bottom: 18px;
+  left: 7px;
   color: #3f332f;
-  font-size: 2.22cqw;
+  font-size: 18px;
   font-weight: 900;
   line-height: 1;
   text-align: center;
@@ -522,14 +531,14 @@ button {
 .task-v2-duration-root {
   position: absolute;
   z-index: 10;
-  top: 19.2cqh;
+  top: 72px;
   left: 0;
   display: flex;
   width: 100%;
-  height: 42.67cqh;
+  height: 160px;
   align-items: center;
   justify-content: center;
-  gap: 5.17cqw;
+  gap: 42px;
 }
 
 .task-v2-duration-root[hidden],
@@ -541,9 +550,9 @@ button {
 
 .task-v2-duration {
   position: relative;
-  width: 15.27cqw;
-  height: 36.53cqh;
-  flex: 0 0 15.27cqw;
+  width: 124px;
+  height: 137px;
+  flex: 0 0 124px;
   padding: 0;
   background: transparent;
   cursor: pointer;
@@ -587,10 +596,10 @@ button {
 .task-v2-prompt {
   position: absolute;
   z-index: 12;
-  bottom: 22.13cqh;
+  bottom: 83px;
   left: 50%;
   width: auto;
-  height: 6.93cqh;
+  height: 26px;
   transform: translateX(-50%);
   object-fit: contain;
   transition: opacity 160ms ease, scale 160ms ease;
@@ -609,10 +618,10 @@ button {
 .task-v2-bottom {
   position: absolute;
   z-index: 5;
-  right: -0.99cqw;
+  right: -8px;
   bottom: -1px;
-  left: -0.99cqw;
-  height: 34.4cqh;
+  left: -8px;
+  height: 129px;
   transition: transform 300ms ease-in;
   animation: task-panel-in 400ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
   pointer-events: none;
@@ -630,9 +639,9 @@ button {
 .task-v2-next {
   position: absolute;
   right: 50%;
-  bottom: 2.4cqh;
-  width: 11.21cqw;
-  height: 18.13cqh;
+  bottom: 9px;
+  width: 91px;
+  height: 68px;
   padding: 0;
   transform: translateX(50%);
   background: transparent;
@@ -659,10 +668,10 @@ button {
 .task-v2-confirm-card {
   position: absolute;
   z-index: 2;
-  top: 14.93cqh;
+  top: 56px;
   left: 50%;
-  width: 57.88cqw;
-  height: 75.2cqh;
+  width: 470px;
+  height: 282px;
   transform: translateX(-50%);
   animation: confirm-card-in 400ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
@@ -679,9 +688,9 @@ button {
 .task-v2-confirm-mascot {
   position: absolute;
   z-index: 1;
-  bottom: 8.27cqh;
-  left: 14.04cqw;
-  width: 13.67cqw;
+  bottom: 31px;
+  left: 114px;
+  width: 111px;
   height: auto;
   animation: confirm-mascot-in 420ms 70ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
   pointer-events: none;
@@ -690,22 +699,22 @@ button {
 .task-v2-confirm-art {
   position: absolute;
   z-index: 2;
-  top: 9.33cqh;
-  left: 8.62cqw;
-  width: 14.16cqw;
-  height: 30.67cqh;
-  border: 0.62cqw solid rgba(255, 255, 255, 0.55);
-  border-radius: 3.45cqw;
+  top: 35px;
+  left: 70px;
+  width: 115px;
+  height: 115px;
+  border: 5px solid rgba(255, 255, 255, 0.55);
+  border-radius: 28px;
   object-fit: cover;
 }
 
 .task-v2-confirm-name {
   position: absolute;
   z-index: 2;
-  top: 13.6cqh;
-  left: 28.08cqw;
+  top: 51px;
+  left: 228px;
   color: #392820;
-  font-size: 3.94cqw;
+  font-size: 32px;
   font-weight: 900;
   line-height: 1.1;
 }
@@ -713,15 +722,15 @@ button {
 .task-v2-confirm-time {
   position: absolute;
   z-index: 2;
-  top: 29.87cqh;
-  left: 27.46cqw;
+  top: 112px;
+  left: 223px;
   display: flex;
-  min-width: 17.86cqw;
-  height: 12.53cqh;
+  min-width: 145px;
+  height: 47px;
   align-items: center;
   justify-content: center;
-  gap: 1.23cqw;
-  padding: 0 2.22cqw;
+  gap: 10px;
+  padding: 0 18px;
   border-radius: 999px;
   background: #ffe6a8;
   color: #392820;
@@ -729,14 +738,14 @@ button {
 
 .task-v2-confirm-time img {
   display: block;
-  width: 3.69cqw;
-  height: 8cqh;
-  border-radius: 0.99cqw;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
   object-fit: cover;
 }
 
 .task-v2-confirm-time b {
-  font-size: 2.71cqw;
+  font-size: 22px;
   white-space: nowrap;
 }
 
@@ -744,16 +753,16 @@ button {
   --hold-progress: 0;
   position: absolute;
   z-index: 3;
-  bottom: 7.73cqh;
-  left: 13.79cqw;
-  width: 30.3cqw;
-  height: 18.4cqh;
+  bottom: 29px;
+  left: 112px;
+  width: 246px;
+  height: 69px;
   padding: 0;
   overflow: visible;
-  border: 0.74cqw solid white;
+  border: 6px solid white;
   border-radius: 999px;
   background: #64d273;
-  box-shadow: 0.86cqw 0 0 #8fff3f;
+  box-shadow: 7px 0 0 #8fff3f;
   cursor: pointer;
   touch-action: none;
 }
@@ -763,7 +772,7 @@ button {
   z-index: 3;
   top: 50%;
   left: 50%;
-  width: 7.02cqw;
+  width: 57px;
   height: auto;
   transform: translate(-58%, -50%);
   pointer-events: none;
@@ -773,10 +782,10 @@ button {
   position: absolute;
   z-index: 3;
   top: 50%;
-  left: calc(50% + 3.94cqw);
+  left: calc(50% + 32px);
   transform: translateY(-55%);
   color: white;
-  font-size: 4.43cqw;
+  font-size: 36px;
   font-weight: 1000;
   pointer-events: none;
 }
@@ -784,9 +793,9 @@ button {
 .task-v2-hold-progress {
   position: absolute;
   z-index: 4;
-  inset: -0.86cqw;
-  width: calc(100% + 1.72cqw);
-  height: calc(100% + 1.72cqw);
+  inset: -7px;
+  width: calc(100% + 14px);
+  height: calc(100% + 14px);
   overflow: visible;
   pointer-events: none;
 }

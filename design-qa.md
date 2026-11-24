@@ -82,7 +82,7 @@
 2. Final browser pass
    - hidden 层显式 `display:none`；卡片点击、语音与自动居中恢复。
    - 确认态清除旧动画后，未选时钟、底板和下一步按钮完整退场。
-   - 核心尺寸改为容器查询单位，同一 812:375 比例在桌面与手机横屏保持一致。
+   - 核心尺寸改为固定 812×375 设计画布并按容器等比缩放，同一比例在桌面、手机横屏和旧版 WebView 保持一致。
    - No actionable P0/P1/P2 findings remained.
 
 final result: passed

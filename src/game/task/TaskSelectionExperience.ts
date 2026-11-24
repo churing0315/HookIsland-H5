@@ -53,6 +53,7 @@ export class TaskSelectionExperience {
     this.state.reset(step);
     this.host.innerHTML = `
       <section class="task-v2" aria-label="选择专注契约">
+        <div class="task-v2-design">
         <img class="task-v2-cloud cloud-a" src="/assets/v2/mascot-cloud.png" alt="">
         <img class="task-v2-cloud cloud-b" src="/assets/v2/mascot-cloud.png" alt="">
         <img class="task-v2-cloud cloud-c" src="/assets/v2/mascot-cloud.png" alt="">
@@ -67,8 +68,21 @@ export class TaskSelectionExperience {
           <button class="task-v2-next pressable" type="button" aria-label="下一步"><img src="${TASK_ASSETS.nextButton}" alt="下一步"></button>
         </div>
         <div class="task-v2-confirm-root"></div>
+        </div>
       </section>
     `;
+    const design = this.host.querySelector<HTMLElement>('.task-v2-design');
+    if (!design) throw new Error('Task selection design surface failed to mount');
+    const resize = (): void => {
+      const scale = Math.min(this.host.clientWidth / 812, this.host.clientHeight / 375);
+      design.style.setProperty('--task-scale', String(scale));
+      design.style.left = `${(this.host.clientWidth - 812 * scale) / 2}px`;
+      design.style.top = `${(this.host.clientHeight - 375 * scale) / 2}px`;
+    };
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(this.host);
+    this.cleanup.push(() => observer.disconnect());
     const back = this.host.querySelector<HTMLButtonElement>('.task-v2-back');
     this.nextButton = this.host.querySelector<HTMLButtonElement>('.task-v2-next');
     this.prompt = this.host.querySelector<HTMLImageElement>('.task-v2-prompt');
