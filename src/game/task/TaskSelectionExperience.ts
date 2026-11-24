@@ -62,9 +62,9 @@ export class TaskSelectionExperience {
         <button class="task-v2-back pressable" type="button" aria-label="返回"><img src="/assets/v2/btn-back.png" alt=""></button>
         <div class="task-v2-carousel-viewport" aria-label="任务轮播"></div>
         <div class="task-v2-duration-root" aria-label="时长选择"></div>
-        <img class="task-v2-prompt" alt="">
         <div class="task-v2-bottom">
           <img class="task-v2-bottom-image" src="${TASK_ASSETS.panel}" alt="">
+          <img class="task-v2-prompt" alt="">
           <button class="task-v2-next pressable" type="button" aria-label="下一步"><img src="${TASK_ASSETS.nextButton}" alt="下一步"></button>
         </div>
         <div class="task-v2-confirm-root"></div>
@@ -118,7 +118,7 @@ export class TaskSelectionExperience {
     } else {
       carouselRoot.hidden = true;
       this.prompt.hidden = true;
-      this.panel.classList.add('is-lowered');
+      this.panel.classList.add('is-lowering', 'is-lowered');
       this.mountDurationSelector();
       this.durationRoot.classList.add('is-confirming');
       this.mountConfirmation();
@@ -177,11 +177,12 @@ export class TaskSelectionExperience {
   private async showConfirmStep(): Promise<void> {
     if (!this.state.beginTransition() || !this.durationSelector || !this.panel) return;
     if (this.nextButton) this.nextButton.disabled = true;
-    this.prompt?.classList.add('is-hidden');
     await this.durationSelector.transitionToConfirm();
     if (this.destroyed) return;
+    this.panel.classList.add('is-lowering');
+    void this.panel.offsetHeight;
     this.panel.classList.add('is-lowered');
-    await new Promise((resolve) => window.setTimeout(resolve, 260));
+    await new Promise((resolve) => window.setTimeout(resolve, 320));
     if (this.destroyed) return;
     this.mountConfirmation();
     this.state.finishTransition('CONTRACT_CONFIRM');

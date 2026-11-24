@@ -104,4 +104,13 @@
    - Browser evidence: 面板上拉中间帧及落位帧无露底；8 张卡与 4 个时钟完整显示；根容器 scrollTop=0；正式沙漏路径正确；按钮 box-shadow=none；控制台 0 warning / 0 error。
    - No actionable P0/P1/P2 findings remained.
 
+5. High-window correction pass（2026-11-24）
+   - [P1] 选中卡 1.1 倍缩放后仍越过轮播顶部裁切线；上一轮只增加容器高度，没有预留顶部缩放安全区。
+   - [P1] 为遮挡底边而移动整个底板，连带改变了 `task_btn_next` 坐标。
+   - [P1] 提示字位于底板容器外；退出类同时取消进场动画并设置最终 transform，导致底板/按钮跳变且提示字直接淡出。
+   - Fix: 卡片回到视觉稿纵向坐标并扩大轮播上下安全区；底板恢复 `bottom: -1px`，用独立底边延伸遮挡，不移动按钮。
+   - Fix: 提示字移入底板容器；先固化落位 transform，再下一帧启动 300ms 整体下拉，确认卡在退场结束后出现。
+   - Browser evidence: 1139×804、1180×620、844×390 三个视口均无卡片裁切；上拉中间帧无露底；下拉中间帧中面板、提示字和按钮保持同一位移；根容器 scrollTop=0。
+   - No actionable P0/P1/P2 findings remained.
+
 final result: passed
