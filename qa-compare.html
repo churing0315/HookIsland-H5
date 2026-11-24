@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>拉钩岛 V2 视觉对照</title>
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 28px; background: #edf3f5; font-family: sans-serif; color: #3f352a; }
+      h1 { margin: 0 0 18px; font-size: 24px; }
+      main { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+      section { padding: 14px; border-radius: 18px; background: white; box-shadow: 0 10px 30px rgba(56, 78, 91, .12); }
+      h2 { margin: 0 0 10px; font-size: 16px; }
+      img, iframe { display: block; width: 100%; aspect-ratio: 812 / 375; border: 0; border-radius: 12px; object-fit: cover; }
+    </style>
+  </head>
+  <body>
+    <h1>大型扩建岛 · 同视口设计 QA</h1>
+    <main>
+      <section>
+        <h2>视觉参考：扩展地图.png</h2>
+        <img src="/docs/v2/references/扩展地图.png" alt="大型扩建岛视觉参考" />
+      </section>
+      <section>
+        <h2>浏览器实现：stage=2</h2>
+        <iframe src="/?fast=1&mapStage=2" title="大型扩建岛浏览器实现"></iframe>
+      </section>
+    </main>
+  </body>
+</html>

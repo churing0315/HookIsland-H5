@@ -9,7 +9,14 @@ npm install
 npm run dev
 ```
 
-演示加速模式：在本地地址后添加 `?fast=1`。加速模式把“游戏分钟”映射为真实秒，例如 5 分钟任务约 5 秒完成；2 秒拉钩和 3 秒庆祝保持正常时长。
+演示加速模式：在本地地址后添加 `?fast=1`。加速模式把“游戏分钟”映射为真实秒，例如 5 分钟任务约 5 秒完成；3 秒庆祝保持正常时长。新版任务页长按满 1 秒后直接进入专注；旧版 2 秒拉钩仪式代码仍保留给其他入口或后续恢复使用。
+
+V2 地图只读预览参数仅在 `fast=1` 时生效，不会修改正式存档：
+
+- 初始岛：`?fast=1&mapStage=0`
+- 中型岛：`?fast=1&mapStage=1`
+- 大型岛：`?fast=1&mapStage=2`
+- 大岛近景：`?fast=1&mapStage=2&zoom=1.2`
 
 ## 构建与测试
 
@@ -24,10 +31,23 @@ npm run preview
 ## 当前架构
 
 - `src/game/state/GameFlow.ts`：P0 页面状态与计时流程；
-- `src/game/scenes/PrototypeScene.ts`：Phaser 世界、色盘、岛屿、拖放与放置反馈；
+- `src/game/scenes/PrototypeScene.ts`：Phaser 世界层/HUD 层、色盘、拖放与反馈；
 - `src/game/ui/AppUI.ts`：任务卡、按钮、进度与暂停 DOM 界面；
-- `src/game/storage.ts`：本地存档、跨日计数重置；
-- `src/game/domain/placement.ts`：草地合法性和重叠判断；
+- `src/game/task/TaskSelectionExperience.ts`：正式任务页三状态容器与过渡编排；
+- `src/game/task/TaskCarousel.ts`：非循环轮播、惯性、吸附与动态倾斜；
+- `src/game/task/DurationSelector.ts`：四档时长、选中摆动与确认过渡；
+- `src/game/task/ContractConfirm.ts`：1 秒长按路径进度、取消回退与防重复提交；
+- `src/game/task/VoiceManager.ts`：任务/时长语音互斥播放和异常降级；
+- `src/game/task/taskConfig.ts`：8 项任务、4 档时长、图片和 WAV 的集中映射；
+- `src/game/audio/GameAudioManager.ts`：全局点击/不可点击音效、确认完成音效与岛屿循环 BGM；
+- `src/game/audio/audioAssets.ts`：全局音频路径与按钮音频优先级策略；
+- `src/game/map/mapConfig.ts`：三个稳定坐标阶段的正交 tile 数据；
+- `src/game/map/IslandMapRenderer.ts`：草地、沙地、岩地与物件分层渲染；
+- `src/game/map/IslandCameraController.ts`：自动适配、滚轮/按钮缩放、鼠标/触控平移与双指缩放；
+- `src/game/map/IslandExpansionService.ts`：可配置的累计 3/9 次扩岛阈值；
+- `src/game/storage.ts`：V1→V2 存档迁移、跨日计数重置；
+- `src/game/domain/placement.ts`：footprint、地形、越界、重叠与公共地标判断；
+- `src/game/data/assetCatalog.ts`：36 件后续素材的占格、地形和解锁批次目录；
 - `src/game/assets/placeholders.ts`：与正式美术解耦的程序占位纹理；
 - `public/assets/asset-manifest.json`：资源替换映射；
 - `assets-source/`：未来正式独立源文件目录，不进入网页加载路径。
@@ -41,11 +61,22 @@ npm run preview
 5. 将占位纹理工厂替换为 Phaser Loader 加载，但继续使用逻辑 ID；
 6. 对照 Art Bible 检查角色比例、六色、描边、透视和低刺激动效。
 
-角色设定图本身不是动画精灵。本原型没有裁切或重绘角色设定图，当前圆形角色仅是明确标记的抽象占位。
+岛屿页已使用用户提供的小伴龙、云朵、返回键和拉钩按钮切片；任务选择三步已使用正式 PNG 与 12 条 WAV。计时、庆祝中的角色及岛上建筑仍为程序占位，等待下一轮正式资源整合。
+
+## 音频策略
+
+- 普通可点击按钮播放 `/assets/audio/click.wav`；
+- 已有任务/时长语音或独立音效的控件不叠加默认点击声；
+- 所有 `disabled` / `aria-disabled` 控件播放 `/assets/audio/unableclick.wav`；
+- 确认页长按满 1 秒时播放 `/assets/audio/confirmbtn.wav`；
+- 岛屿首页使用 `/assets/audio/birds-morning.wav` 循环播放，离开岛屿暂停；受浏览器自动播放规则限制，首次进入时会在第一次用户交互后开始；
+- `homepinky.wav` 已保留为独立源文件和运行时资源，本轮尚未指定触发点。
+
+所有原始 WAV 保存在 `assets-source/audio/`，运行时文件保存在 `public/assets/audio/`，后续可独立压缩或替换而不改交互代码。
 
 ## 本地数据
 
-存档键：`lagou-island.prototype.v1`。当前保存每日成功放置次数和已放置物件。浏览器清理站点数据会删除原型进度。
+存档键继续使用 `lagou-island.prototype.v1`，避免旧用户丢档。读取时会迁移为 schema V2，保存 `mapStage`、累计建造数、网格坐标、footprint、每日 3 次建造及第 4 次独立勋章。旧屏幕坐标保存在 `legacyPosition`。
 
 ## 浏览器目标
 
@@ -56,4 +87,4 @@ npm run preview
 
 ## 测试范围
 
-当前自动化覆盖草地合法性、重叠检测、本地存档恢复和跨日进度重置。浏览器验收需走通：岛屿→任务→拉钩→计时/暂停→庆祝→拖放→刷新恢复。
+当前自动化覆盖三阶段 tile 单调扩张、沙/岩地形、footprint 合法性、越界/重叠、36 件目录、V1 存档迁移、跨日重置、轮播边界/倾角/吸附、任务页防重复状态切换及按钮音频优先级。浏览器验收已走通：岛屿→任务三步→长按确认→计时→庆祝→拖放→刷新恢复，以及大岛缩放和平移。

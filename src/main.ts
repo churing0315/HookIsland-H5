@@ -26,7 +26,7 @@ const game = new Phaser.Game({
     height: GAME_HEIGHT,
   },
   input: {
-    activePointers: 2,
+    activePointers: 3,
   },
   scene: [PrototypeScene],
   callbacks: {
