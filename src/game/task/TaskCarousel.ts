@@ -66,6 +66,7 @@ export class TaskCarousel {
       const card = document.createElement('button');
       card.type = 'button';
       card.className = 'task-v2-card';
+      card.dataset.audioPolicy = 'custom';
       card.dataset.taskId = task.id;
       card.setAttribute('aria-label', `选择${task.name}`);
       card.style.setProperty('--entry-order', String(Math.abs(index - this.selectedIndex)));

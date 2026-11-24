@@ -28,7 +28,7 @@ export class ContractConfirm {
         <img class="task-v2-confirm-art" src="${task.illustration}" alt="${task.name}">
         <strong class="task-v2-confirm-name">${task.name}</strong>
         <div class="task-v2-confirm-time"><img src="${TASK_ASSETS.confirmTimeIcon}" alt=""><b>${minutes} 分钟</b></div>
-        <button class="task-v2-hold-button pressable" type="button" aria-label="长按一秒拉钩确认">
+        <button class="task-v2-hold-button pressable" type="button" data-audio-policy="custom" aria-label="长按一秒拉钩确认">
           <svg class="task-v2-hold-progress" viewBox="0 0 440 120" aria-hidden="true">
             <rect x="7" y="7" width="426" height="106" rx="53" pathLength="100"></rect>
           </svg>

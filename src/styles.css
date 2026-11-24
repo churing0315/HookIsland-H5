@@ -137,6 +137,7 @@ button {
 }
 
 .pinky-button:disabled,
+.pinky-button[aria-disabled="true"],
 .confirm-button:disabled {
   cursor: default;
   opacity: 0.58;
@@ -167,7 +168,8 @@ button {
   box-shadow: none;
 }
 
-.pinky-button:disabled {
+.pinky-button:disabled,
+.pinky-button[aria-disabled="true"] {
   opacity: 0.62;
 }
 
@@ -676,7 +678,8 @@ button {
   transform: translateY(118%);
 }
 
-.task-v2-bottom.is-lowering .task-v2-next:disabled {
+.task-v2-bottom.is-lowering .task-v2-next:disabled,
+.task-v2-bottom.is-lowering .task-v2-next[aria-disabled="true"] {
   opacity: 1;
 }
 
@@ -694,7 +697,8 @@ button {
   z-index: 2;
 }
 
-.task-v2-next:disabled {
+.task-v2-next:disabled,
+.task-v2-next[aria-disabled="true"] {
   opacity: 0.5;
   cursor: default;
 }

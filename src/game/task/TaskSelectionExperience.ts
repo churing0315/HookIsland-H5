@@ -1,4 +1,5 @@
 import type { GameFlow } from '../state/GameFlow';
+import type { GameAudioManager } from '../audio/GameAudioManager';
 import type { GameSnapshot } from '../types';
 import { ContractConfirm } from './ContractConfirm';
 import { DurationSelector } from './DurationSelector';
@@ -27,6 +28,7 @@ export class TaskSelectionExperience {
     private readonly host: HTMLElement,
     private readonly flow: GameFlow,
     snapshot: GameSnapshot,
+    private readonly audio: GameAudioManager,
   ) {
     this.snapshot = snapshot;
   }
@@ -158,7 +160,7 @@ export class TaskSelectionExperience {
 
   private async showDurationStep(): Promise<void> {
     if (!this.state.beginTransition()) return;
-    if (this.nextButton) this.nextButton.disabled = true;
+    if (this.nextButton) this.nextButton.setAttribute('aria-disabled', 'true');
     await this.carousel?.exit();
     if (this.destroyed || !this.durationRoot || !this.prompt) return;
     this.carousel?.destroy();
@@ -176,7 +178,7 @@ export class TaskSelectionExperience {
 
   private async showConfirmStep(): Promise<void> {
     if (!this.state.beginTransition() || !this.durationSelector || !this.panel) return;
-    if (this.nextButton) this.nextButton.disabled = true;
+    if (this.nextButton) this.nextButton.setAttribute('aria-disabled', 'true');
     await this.durationSelector.transitionToConfirm();
     if (this.destroyed) return;
     this.panel.classList.add('is-lowering');
@@ -193,14 +195,19 @@ export class TaskSelectionExperience {
     const task = findTaskVisual(this.snapshot.selectedTaskId) ?? TASK_VISUALS[0];
     this.confirmRoot.classList.add('is-visible');
     this.confirm = new ContractConfirm(this.confirmRoot, task, this.snapshot.selectedMinutes, {
-      onConfirmed: () => this.flow.confirmContract(),
+      onConfirmed: () => {
+        this.audio.playConfirm();
+        this.flow.confirmContract();
+      },
     });
   }
 
   private updateNextAvailability(): void {
     if (!this.nextButton) return;
-    this.nextButton.disabled = this.state.isLocked ||
+    const unavailable = this.state.isLocked ||
       (this.state.current === 'TASK_SELECT' ? this.snapshot.selectedTaskId === null : this.snapshot.selectedMinutes === null);
+    this.nextButton.disabled = false;
+    this.nextButton.setAttribute('aria-disabled', String(unavailable));
     this.nextButton.hidden = this.state.current === 'CONTRACT_CONFIRM';
   }
 

@@ -70,6 +70,14 @@
       "note": "12 条短语音；新语音播放前停止上一条，缺失时静默降级"
     },
     {
+      "id": "global.audio",
+      "sourcePath": "assets-source/audio/",
+      "runtimePath": "/assets/audio/",
+      "files": ["click.wav", "birds-morning.wav", "confirmbtn.wav", "unableclick.wav", "homepinky.wav"],
+      "replaceable": true,
+      "note": "全局点击、岛屿 BGM、确认完成与不可点击音效；homepinky.wav 本轮仅保留，未指定触发点"
+    },
+    {
       "id": "catalog.v2.36-items",
       "sourcePath": "src/game/data/assetCatalog.ts",
       "runtimePath": null,

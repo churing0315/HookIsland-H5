@@ -1,4 +1,5 @@
 import { DAILY_PLANT_LIMIT } from '../config';
+import { GameAudioManager } from '../audio/GameAudioManager';
 import { effectiveMapStage } from '../map/IslandExpansionService';
 import { MAP_STAGES } from '../map/mapConfig';
 import type { GameFlow } from '../state/GameFlow';
@@ -10,13 +11,17 @@ export class AppUI {
   private snapshot!: GameSnapshot;
   private renderedScreen: GameSnapshot['screen'] | null = null;
   private taskExperience: TaskSelectionExperience | null = null;
+  private readonly audio: GameAudioManager;
 
   constructor(
     private readonly root: HTMLElement,
     private readonly flow: GameFlow,
-  ) {}
+  ) {
+    this.audio = new GameAudioManager(root);
+  }
 
   mount(): void {
+    this.audio.mount();
     this.root.addEventListener('click', this.handleClick);
     this.unsubscribe = this.flow.subscribe((snapshot) => {
       this.snapshot = snapshot;
@@ -33,11 +38,13 @@ export class AppUI {
     this.taskExperience?.destroy();
     this.taskExperience = null;
     this.root.removeEventListener('click', this.handleClick);
+    this.audio.destroy();
   }
 
   private readonly handleClick = (event: MouseEvent): void => {
     const target = (event.target as HTMLElement).closest<HTMLElement>('[data-action]');
     if (!target) return;
+    if (target.matches(':disabled, [aria-disabled="true"]')) return;
     const action = target.dataset.action;
     if (action === 'open-task') this.flow.openTaskSelect();
     if (action === 'back-island') this.flow.returnToIsland();
@@ -52,6 +59,7 @@ export class AppUI {
     this.taskExperience?.destroy();
     this.taskExperience = null;
     this.renderedScreen = this.snapshot.screen;
+    this.audio.setScreen(this.snapshot.screen);
     const fastChip = this.snapshot.fastMode ? '<div class="demo-chip">演示加速</div>' : '';
     switch (this.snapshot.screen) {
       case 'island':
@@ -59,7 +67,7 @@ export class AppUI {
         break;
       case 'task-select':
         this.root.innerHTML = fastChip;
-        this.taskExperience = new TaskSelectionExperience(this.root, this.flow, this.snapshot);
+        this.taskExperience = new TaskSelectionExperience(this.root, this.flow, this.snapshot, this.audio);
         this.taskExperience.mount();
         break;
       case 'ritual':
@@ -105,7 +113,7 @@ export class AppUI {
       </section>
       ${this.snapshot.fastMode ? `<div class="stage-preview-chip">演示 · 地图阶段 ${stage}</div>` : ''}
       ${this.cameraControlsMarkup()}
-      <button class="pinky-button" data-action="open-task" ${full ? 'disabled' : ''} aria-label="${
+      <button class="pinky-button" data-action="open-task" ${full ? 'aria-disabled="true"' : ''} aria-label="${
         full ? '今天已经完成' : '和小伴龙拉钩'
       }">
         <img src="/assets/v2/btn-pinky.png" alt="${full ? '今天已经完成啦' : '和小伴龙拉钩'}">
