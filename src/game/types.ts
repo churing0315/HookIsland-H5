@@ -10,7 +10,6 @@ export interface Footprint {
 export interface TaskDefinition {
   id: string;
   name: string;
-  icon: string;
   defaultMinutes: 5 | 10 | 15 | 20;
 }
 

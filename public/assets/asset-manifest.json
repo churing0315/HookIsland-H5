@@ -28,6 +28,47 @@
       "replaceable": false
     },
     {
+      "id": "task-v2.ui",
+      "sourcePath": "assets-source/task-v2/",
+      "runtimePath": "/assets/task-v2/",
+      "files": [
+        "panel.png",
+        "side-shadow.png",
+        "card-default.png",
+        "card-selected.png",
+        "card-selected-spot.png",
+        "prompt-task.png",
+        "prompt-duration.png",
+        "button-next.png",
+        "time-5.png",
+        "time-10.png",
+        "time-15.png",
+        "time-20.png",
+        "confirm-panel.png",
+        "confirm-label.png",
+        "mascot.png",
+        "hourglass.png"
+      ],
+      "replaceable": false,
+      "note": "用户提供的正式任务页切图；hourglass.png 从正式确认视觉稿无损裁切"
+    },
+    {
+      "id": "task-v2.illustrations",
+      "sourcePath": "assets-source/task-v2/资源/",
+      "runtimePath": "/assets/task-v2/illustrations/",
+      "files": ["english.png", "exercise.png", "story.png", "read.png", "homework.png", "blocks.png", "draw.png", "tidy.png"],
+      "replaceable": false,
+      "note": "8 张正式任务插画，运行时英文文件名由 taskConfig.ts 映射"
+    },
+    {
+      "id": "task-v2.voice",
+      "sourcePath": "assets-source/task-v2/音频/",
+      "runtimePath": "/assets/task-v2/audio/",
+      "files": ["english.wav", "exercise.wav", "story.wav", "read.wav", "homework.wav", "blocks.wav", "draw.wav", "tidy.wav", "5.wav", "10.wav", "15.wav", "20.wav"],
+      "replaceable": true,
+      "note": "12 条短语音；新语音播放前停止上一条，缺失时静默降级"
+    },
+    {
       "id": "catalog.v2.36-items",
       "sourcePath": "src/game/data/assetCatalog.ts",
       "runtimePath": null,

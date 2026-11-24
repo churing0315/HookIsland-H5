@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-演示加速模式：在本地地址后添加 `?fast=1`。加速模式把“游戏分钟”映射为真实秒，例如 5 分钟任务约 5 秒完成；2 秒拉钩和 3 秒庆祝保持正常时长。
+演示加速模式：在本地地址后添加 `?fast=1`。加速模式把“游戏分钟”映射为真实秒，例如 5 分钟任务约 5 秒完成；3 秒庆祝保持正常时长。新版任务页长按满 1 秒后直接进入专注；旧版 2 秒拉钩仪式代码仍保留给其他入口或后续恢复使用。
 
 V2 地图只读预览参数仅在 `fast=1` 时生效，不会修改正式存档：
 
@@ -33,6 +33,12 @@ npm run preview
 - `src/game/state/GameFlow.ts`：P0 页面状态与计时流程；
 - `src/game/scenes/PrototypeScene.ts`：Phaser 世界层/HUD 层、色盘、拖放与反馈；
 - `src/game/ui/AppUI.ts`：任务卡、按钮、进度与暂停 DOM 界面；
+- `src/game/task/TaskSelectionExperience.ts`：正式任务页三状态容器与过渡编排；
+- `src/game/task/TaskCarousel.ts`：非循环轮播、惯性、吸附与动态倾斜；
+- `src/game/task/DurationSelector.ts`：四档时长、选中摆动与确认过渡；
+- `src/game/task/ContractConfirm.ts`：1 秒长按路径进度、取消回退与防重复提交；
+- `src/game/task/VoiceManager.ts`：任务/时长语音互斥播放和异常降级；
+- `src/game/task/taskConfig.ts`：8 项任务、4 档时长、图片和 WAV 的集中映射；
 - `src/game/map/mapConfig.ts`：三个稳定坐标阶段的正交 tile 数据；
 - `src/game/map/IslandMapRenderer.ts`：草地、沙地、岩地与物件分层渲染；
 - `src/game/map/IslandCameraController.ts`：自动适配、滚轮/按钮缩放、鼠标/触控平移与双指缩放；
@@ -53,7 +59,7 @@ npm run preview
 5. 将占位纹理工厂替换为 Phaser Loader 加载，但继续使用逻辑 ID；
 6. 对照 Art Bible 检查角色比例、六色、描边、透视和低刺激动效。
 
-岛屿页已使用用户提供的小伴龙、云朵、返回键和拉钩按钮切片；计时、庆祝中的角色及岛上建筑仍为程序占位，等待下一轮正式资源整合。
+岛屿页已使用用户提供的小伴龙、云朵、返回键和拉钩按钮切片；任务选择三步已使用正式 PNG 与 12 条 WAV。计时、庆祝中的角色及岛上建筑仍为程序占位，等待下一轮正式资源整合。
 
 ## 本地数据
 
@@ -68,4 +74,4 @@ npm run preview
 
 ## 测试范围
 
-当前自动化覆盖三阶段 tile 单调扩张、沙/岩地形、footprint 合法性、越界/重叠、36 件目录、V1 存档迁移和跨日重置。浏览器验收已走通：岛屿→任务→拉钩→计时→庆祝→拖放→刷新恢复，以及大岛缩放和平移。
+当前自动化覆盖三阶段 tile 单调扩张、沙/岩地形、footprint 合法性、越界/重叠、36 件目录、V1 存档迁移、跨日重置、轮播边界/倾角/吸附和任务页防重复状态切换。浏览器验收已走通：岛屿→任务三步→长按确认→计时→庆祝→拖放→刷新恢复，以及大岛缩放和平移。

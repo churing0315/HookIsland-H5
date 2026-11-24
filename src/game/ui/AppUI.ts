@@ -1,13 +1,15 @@
 import { DAILY_PLANT_LIMIT } from '../config';
-import { DURATION_OPTIONS, TASKS } from '../data/tasks';
 import { effectiveMapStage } from '../map/IslandExpansionService';
 import { MAP_STAGES } from '../map/mapConfig';
 import type { GameFlow } from '../state/GameFlow';
+import { TaskSelectionExperience } from '../task/TaskSelectionExperience';
 import type { GameSnapshot } from '../types';
 
 export class AppUI {
   private unsubscribe: (() => void) | null = null;
   private snapshot!: GameSnapshot;
+  private renderedScreen: GameSnapshot['screen'] | null = null;
+  private taskExperience: TaskSelectionExperience | null = null;
 
   constructor(
     private readonly root: HTMLElement,
@@ -18,12 +20,18 @@ export class AppUI {
     this.root.addEventListener('click', this.handleClick);
     this.unsubscribe = this.flow.subscribe((snapshot) => {
       this.snapshot = snapshot;
+      if (snapshot.screen === 'task-select' && this.taskExperience && this.renderedScreen === 'task-select') {
+        this.taskExperience.syncSnapshot(snapshot);
+        return;
+      }
       this.render();
     });
   }
 
   destroy(): void {
     this.unsubscribe?.();
+    this.taskExperience?.destroy();
+    this.taskExperience = null;
     this.root.removeEventListener('click', this.handleClick);
   }
 
@@ -33,10 +41,6 @@ export class AppUI {
     const action = target.dataset.action;
     if (action === 'open-task') this.flow.openTaskSelect();
     if (action === 'back-island') this.flow.returnToIsland();
-    if (action === 'select-task' && target.dataset.id) this.flow.selectTask(target.dataset.id);
-    if (action === 'select-minutes' && target.dataset.minutes) {
-      this.flow.selectMinutes(Number(target.dataset.minutes) as 5 | 10 | 15 | 20);
-    }
     if (action === 'begin-ritual') this.flow.beginRitual();
     if (action === 'toggle-pause') this.flow.togglePause();
     if (action === 'camera-zoom-in') window.dispatchEvent(new CustomEvent('hook-island-camera', { detail: 'zoom-in' }));
@@ -45,13 +49,18 @@ export class AppUI {
   };
 
   private render(): void {
+    this.taskExperience?.destroy();
+    this.taskExperience = null;
+    this.renderedScreen = this.snapshot.screen;
     const fastChip = this.snapshot.fastMode ? '<div class="demo-chip">演示加速</div>' : '';
     switch (this.snapshot.screen) {
       case 'island':
         this.root.innerHTML = `${fastChip}${this.islandMarkup()}`;
         break;
       case 'task-select':
-        this.root.innerHTML = `${fastChip}${this.taskMarkup()}`;
+        this.root.innerHTML = fastChip;
+        this.taskExperience = new TaskSelectionExperience(this.root, this.flow, this.snapshot);
+        this.taskExperience.mount();
         break;
       case 'ritual':
         this.root.innerHTML = `${fastChip}<section class="center-copy" aria-live="polite"><p>我们拉钩</p><h1>说到做到</h1><span>约定正在生效……</span></section>`;
@@ -118,31 +127,6 @@ export class AppUI {
         <button data-action="camera-reset" aria-label="地图归位">归位</button>
         <button data-action="camera-zoom-in" aria-label="放大地图">＋</button>
       </div>
-    `;
-  }
-
-  private taskMarkup(): string {
-    const selectedTask = this.snapshot.selectedTaskId;
-    const selectedMinutes = this.snapshot.selectedMinutes;
-    const taskCards = TASKS.map(
-      (task) => `
-        <button class="task-card ${selectedTask === task.id ? 'selected' : ''}" data-action="select-task" data-id="${task.id}">
-          <span class="task-icon" aria-hidden="true">${task.icon}</span><span>${task.name}</span>
-        </button>`,
-    ).join('');
-    const durationButtons = DURATION_OPTIONS.map(
-      (minutes) => `<button class="duration ${selectedMinutes === minutes ? 'selected' : ''}" data-action="select-minutes" data-minutes="${minutes}">${minutes} 分钟</button>`,
-    ).join('');
-    return `
-      <section class="task-panel">
-        <header class="panel-header">
-          <button class="back-button" data-action="back-island" aria-label="返回岛屿">←</button>
-          <div><span class="eyebrow">今天想专注什么？</span><h1>选择一个小约定</h1></div>
-        </header>
-        <div class="task-grid">${taskCards}</div>
-        <div class="duration-row" aria-label="选择约定时长">${durationButtons}</div>
-        <button class="confirm-button" data-action="begin-ritual" ${this.flow.canBeginRitual() ? '' : 'disabled'}>开始拉钩</button>
-      </section>
     `;
   }
 

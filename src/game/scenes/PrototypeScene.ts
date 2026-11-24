@@ -65,7 +65,7 @@ export class PrototypeScene extends Phaser.Scene {
         this.renderIsland(snapshot.data.placedItems, effectiveMapStage(snapshot.data.mapStage));
         break;
       case 'task-select':
-        this.renderIsland(snapshot.data.placedItems, effectiveMapStage(snapshot.data.mapStage), 0.48);
+        this.prepareFixedScreen(0x92e6ee);
         break;
       case 'ritual':
         this.renderRitual();

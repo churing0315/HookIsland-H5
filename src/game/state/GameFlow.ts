@@ -47,7 +47,7 @@ export class GameFlow {
   openTaskSelect(): void {
     const daily = this.snapshot.data.daily;
     if (daily.planted >= DAILY_PLANT_LIMIT && daily.bonusMedalAwarded) return;
-    this.patch({ screen: 'task-select' });
+    this.patch({ screen: 'task-select', selectedTaskId: 'book', selectedMinutes: null });
   }
 
   returnToIsland(): void {
@@ -58,7 +58,7 @@ export class GameFlow {
   selectTask(taskId: string): void {
     const task = TASKS.find((item) => item.id === taskId);
     if (!task) return;
-    this.patch({ selectedTaskId: taskId, selectedMinutes: task.defaultMinutes });
+    this.patch({ selectedTaskId: taskId });
   }
 
   selectMinutes(minutes: 5 | 10 | 15 | 20): void {
@@ -73,6 +73,13 @@ export class GameFlow {
     if (!this.canBeginRitual()) return;
     this.patch({ screen: 'ritual' });
     this.transitionTimer = window.setTimeout(() => this.startFocus(), 2_000);
+  }
+
+  confirmContract(): boolean {
+    if (this.snapshot.screen !== 'task-select' || !this.canBeginRitual()) return false;
+    this.clearTimers();
+    this.startFocus();
+    return true;
   }
 
   togglePause(): void {

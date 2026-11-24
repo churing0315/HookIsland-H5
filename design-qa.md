@@ -1,4 +1,4 @@
-# 拉钩岛 Demo V2 · 地图与相机 Design QA
+# 拉钩岛 Demo V2 · 地图、相机与任务页 Design QA
 
 - Source visual truth:
   - `docs/v2/references/初始小岛-建筑.png` — 2048×946
@@ -58,5 +58,31 @@
 
 - [P3] 下一轮用独立正式建筑/树木 PNG 替换公共地标与圆冠树占位。
 - [P3] 正式 tile 美术可在不改变 grid 数据的前提下增加柔和岸边转角和少量装饰。
+
+## 任务选择页 V2 · 同视口视觉对照（2026-11-24）
+
+- Source visual truth:
+  - `assets-source/task-v2/任务页面-选择项目.png` — 2338×1080
+  - `assets-source/task-v2/任务页面-选择时长.png` — 2338×1080
+  - `assets-source/task-v2/任务页面-确认页面.png` — 2338×1080
+- Browser implementation: `http://127.0.0.1:5173/?fast=1`，桌面 1180×620 与手机横屏 844×390。
+- Step 1: `#92e6ee` 背景、正式任务卡底板/插画/光斑、5 卡可视轮播、提示字图、底部面板和正式下一步按钮均与参考层级一致。
+- Step 2: 四个正式时钟的相对尺寸、水平节奏、提示字图、面板与按钮位置与参考一致；选中项只做 ±2° 低刺激摆动。
+- Step 3: 正式双层确认卡、任务插画/名称、沙漏与时长胶囊、正式小伴龙和长按按钮层级与参考一致；沙漏从正式确认视觉稿无损裁切，没有使用 emoji 或 CSS 图形代替。
+- Motion: 面板、侧饰、任务卡、时钟、确认卡的出现均使用 overshoot；任务→时长和时长→确认均在同一容器内连续过渡。
+- Interaction: 点击与滑动已区分；拖拽惯性后吸附；短按、移出、取消均复位；长按满 1 秒只提交一次。
+- Console: 0 warnings, 0 errors。
+
+### Task-page comparison history
+
+1. First browser pass
+   - [P1] 隐藏的时长容器仍覆盖轮播命中区，导致视觉可见卡片不能点击。
+   - [P1] 动画 fill mode 覆盖退出态，确认过渡后未选时钟和底板仍可见。
+   - [P2] 初版任务卡使用固定 px，在大桌面视口相对视觉稿偏小。
+2. Final browser pass
+   - hidden 层显式 `display:none`；卡片点击、语音与自动居中恢复。
+   - 确认态清除旧动画后，未选时钟、底板和下一步按钮完整退场。
+   - 核心尺寸改为容器查询单位，同一 812:375 比例在桌面与手机横屏保持一致。
+   - No actionable P0/P1/P2 findings remained.
 
 final result: passed
