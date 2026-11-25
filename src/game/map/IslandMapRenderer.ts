@@ -1,14 +1,26 @@
 import Phaser from 'phaser';
-import { COLORS } from '../config';
 import { getAsset } from '../data/assetCatalog';
 import type { MapStage, PlacedItem, TerrainType } from '../types';
-import { getMapStageConfig, gridToWorldCenter, LANDMARKS, TILE_SIZE } from './mapConfig';
+import { getMapStageConfig, gridToWorldCenter, LANDMARKS, MAP_COLUMNS, MAP_ROWS, TILE_SIZE } from './mapConfig';
+import { renderIsland, TileType } from './islandRenderer';
 
-const TERRAIN_COLORS: Record<TerrainType, [number, number]> = {
-  grass: [COLORS.grass, COLORS.grassLight],
-  sand: [COLORS.sand, 0xffefb5],
-  rock: [COLORS.rock, COLORS.rockLight],
+/** 项目地形 → 演示渲染器地块类型的映射 */
+const TERRAIN_TO_TILE: Record<TerrainType, number> = {
+  grass: TileType.LAND,
+  sand: TileType.SAND,
+  rock: TileType.HIGH,
 };
+
+/** 把某阶段的 tile 配置转换为演示渲染器所需的二维格子地图（水域填 0） */
+function stageToGrid(stage: MapStage): number[][] {
+  const grid: number[][] = Array.from({ length: MAP_ROWS }, () =>
+    new Array<number>(MAP_COLUMNS).fill(TileType.WATER),
+  );
+  for (const tile of getMapStageConfig(stage).tiles) {
+    grid[tile.y][tile.x] = TERRAIN_TO_TILE[tile.terrain];
+  }
+  return grid;
+}
 
 export class IslandMapRenderer {
   constructor(
@@ -18,28 +30,22 @@ export class IslandMapRenderer {
 
   render(stage: MapStage, items: PlacedItem[], showPlacementGrid: boolean, alpha = 1): void {
     const config = getMapStageConfig(stage);
-    const coast = this.scene.add.graphics().setAlpha(alpha);
-    coast.fillStyle(COLORS.coast, 0.74);
-    for (const tile of config.tiles) {
-      coast.fillRoundedRect(tile.x * TILE_SIZE - 7, tile.y * TILE_SIZE - 7, TILE_SIZE + 14, TILE_SIZE + 14, 14);
-    }
-    coast.fillStyle(COLORS.sand, 1);
-    for (const tile of config.tiles) {
-      coast.fillRoundedRect(tile.x * TILE_SIZE - 3, tile.y * TILE_SIZE - 3, TILE_SIZE + 6, TILE_SIZE + 6, 11);
-    }
-    this.container.add(coast);
 
-    const terrain = this.scene.add.graphics().setAlpha(alpha);
-    for (const tile of config.tiles) {
-      const palette = TERRAIN_COLORS[tile.terrain];
-      terrain.fillStyle(palette[(tile.x + tile.y) % 2], 1);
-      terrain.fillRoundedRect(tile.x * TILE_SIZE + 1, tile.y * TILE_SIZE + 1, TILE_SIZE - 2, TILE_SIZE - 2, 7);
-      if (showPlacementGrid) {
-        terrain.lineStyle(1.2, 0xffffff, 0.44);
-        terrain.strokeRoundedRect(tile.x * TILE_SIZE + 2, tile.y * TILE_SIZE + 2, TILE_SIZE - 4, TILE_SIZE - 4, 6);
+    // 岛屿地块：轮廓海岸 + 圆角裁剪棋盘地形（替代原先的逐格圆角矩形拼贴）
+    renderIsland(this.scene, this.container, stageToGrid(stage), MAP_COLUMNS, MAP_ROWS, {
+      cellSize: TILE_SIZE,
+      alpha,
+    });
+
+    // 放置参考网格（建造模式可见）
+    if (showPlacementGrid) {
+      const gridLines = this.scene.add.graphics().setAlpha(alpha);
+      gridLines.lineStyle(1.2, 0xffffff, 0.44);
+      for (const tile of config.tiles) {
+        gridLines.strokeRect(tile.x * TILE_SIZE + 2, tile.y * TILE_SIZE + 2, TILE_SIZE - 4, TILE_SIZE - 4);
       }
+      this.container.add(gridLines);
     }
-    this.container.add(terrain);
 
     for (const landmark of LANDMARKS) {
       const center = gridToWorldCenter(landmark.gridX, landmark.gridY, landmark.footprint);
