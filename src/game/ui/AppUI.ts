@@ -104,8 +104,8 @@ export class AppUI {
         <img class="mascot-image" src="/assets/v2/mascot-xiaobanlong.png" alt="小伴龙">
       </div>
       <section class="island-info" aria-label="岛屿信息">
-        <div class="island-info-thumb">${stage + 1}</div>
-        <div>
+        <div class="island-info-avatar"><div class="island-info-thumb">${stage + 1}</div></div>
+        <div class="island-info-card">
           <strong>乐乐的小岛</strong>
           <span>${stageName} · 累计 ${this.snapshot.data.totalPlaced}</span>
           <span>今日建造 ${planted}/${DAILY_PLANT_LIMIT}</span>
