@@ -1,6 +1,7 @@
 export type Screen = 'island' | 'task-select' | 'ritual' | 'focus' | 'celebration' | 'build';
 export type MapStage = 0 | 1 | 2;
 export type TerrainType = 'grass' | 'sand' | 'rock';
+export type FocusMinutes = 5 | 10 | 15 | 20;
 
 export interface Footprint {
   width: number;
@@ -10,13 +11,13 @@ export interface Footprint {
 export interface TaskDefinition {
   id: string;
   name: string;
-  defaultMinutes: 5 | 10 | 15 | 20;
+  defaultMinutes: FocusMinutes;
 }
 
 export interface FocusSession {
   taskId: string;
   taskName: string;
-  minutes: number;
+  minutes: FocusMinutes;
   totalMs: number;
   remainingMs: number;
   lastTickAt: number;
@@ -59,10 +60,10 @@ export interface PersistedGameData {
 export interface GameSnapshot {
   screen: Screen;
   selectedTaskId: string | null;
-  selectedMinutes: 5 | 10 | 15 | 20 | null;
+  selectedMinutes: FocusMinutes | null;
   focus: FocusSession | null;
   data: PersistedGameData;
   fastMode: boolean;
-  selectedAssetId: string;
+  selectedAssetId: string | null;
   celebrationKind: 'build' | 'medal';
 }

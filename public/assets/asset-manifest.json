@@ -78,6 +78,33 @@
       "note": "全局点击、岛屿 BGM、确认完成与不可点击音效；homepinky.wav 本轮仅保留，未指定触发点"
     },
     {
+      "id": "focus-v2.ui-and-characters",
+      "sourcePath": "assets-source/focus-v2/",
+      "runtimePath": "/assets/focus-v2/",
+      "files": [
+        "focus_btn_music.png",
+        "focus_btn_end.png",
+        "focus_btn_pause.png",
+        "focus_img_island.png",
+        "focus_xbl_clean.png",
+        "focus_xbl_english.png",
+        "focus_xbl_homework.png",
+        "focus_xbl_lego.png",
+        "focus_xbl_listen.png",
+        "focus_xbl_paint.png",
+        "focus_xbl_read.png",
+        "focus_xbl_sport.png",
+        "focus_illust_cloud_1.png",
+        "focus_illust_fish1.png",
+        "focus_illust_fish2.png",
+        "focus_illust_seagull.png",
+        "focus_illust_wave1.png",
+        "focus_illust_wave2.png"
+      ],
+      "replaceable": false,
+      "note": "用户提供的 P4 专注页正式切图；运行时按任务 ID 映射 8 个角色，独立源文件完整保留"
+    },
+    {
       "id": "catalog.v2.36-items",
       "sourcePath": "src/game/data/assetCatalog.ts",
       "runtimePath": null,

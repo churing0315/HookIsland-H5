@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { placedAssetScale } from '../assets/placementDisplay';
 import { getAsset } from '../data/assetCatalog';
 import type { MapStage, PlacedItem, TerrainType } from '../types';
 import { getMapStageConfig, gridToWorldCenter, LANDMARKS, MAP_COLUMNS, MAP_ROWS, TILE_SIZE } from './mapConfig';
@@ -77,9 +78,9 @@ export class IslandMapRenderer {
         const center = gridToWorldCenter(item.gridX, item.gridY, asset.footprint);
         const image = this.scene.add
           .image(center.x, center.y, asset.runtimeTextureKey)
-          .setScale(asset.footprint.width === 1 ? 0.48 : 0.74)
           .setAlpha(alpha)
           .setDepth(center.y + 2);
+        image.setScale(placedAssetScale(asset, image.width, image.height));
         image.setData('placedItemId', item.id);
         this.container.add(image);
       });

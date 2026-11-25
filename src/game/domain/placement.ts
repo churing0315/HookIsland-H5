@@ -44,6 +44,10 @@ function occupiedCells(items: PlacedItem[], includeLandmarks: boolean): Set<stri
 }
 
 export function validatePlacement(request: PlacementRequest): PlacementResult {
+  return validateFootprint(request, occupiedCells(request.items, request.includeLandmarks !== false));
+}
+
+function validateFootprint(request: PlacementRequest, occupied: ReadonlySet<string>): PlacementResult {
   const asset = getAsset(request.assetId);
   const cells = footprintCells(request.gridX, request.gridY, asset.footprint);
   const stage = getMapStageConfig(request.stage);
@@ -57,7 +61,6 @@ export function validatePlacement(request: PlacementRequest): PlacementResult {
     if (!asset.allowedTerrains.includes(tile.terrain)) return { valid: false, reason: 'wrong-terrain', terrains };
   }
 
-  const occupied = occupiedCells(request.items, request.includeLandmarks !== false);
   if (cells.some((cell) => occupied.has(tileKey(cell.x, cell.y)))) {
     return { valid: false, reason: 'overlap', terrains };
   }
@@ -72,6 +75,7 @@ export function findNearestValidPlacement(
   items: PlacedItem[],
 ): { x: number; y: number } | null {
   const bounds = getMapStageConfig(stage).bounds;
+  const occupied = occupiedCells(items, true);
   const candidates: Array<{ x: number; y: number; distance: number }> = [];
   for (let y = bounds.minY; y <= bounds.maxY; y += 1) {
     for (let x = bounds.minX; x <= bounds.maxX; x += 1) {
@@ -80,7 +84,7 @@ export function findNearestValidPlacement(
   }
   candidates.sort((a, b) => a.distance - b.distance || a.y - b.y || a.x - b.x);
   const match = candidates.find((candidate) =>
-    validatePlacement({ assetId, gridX: candidate.x, gridY: candidate.y, stage, items }).valid,
+    validateFootprint({ assetId, gridX: candidate.x, gridY: candidate.y, stage, items }, occupied).valid,
   );
   return match ? { x: match.x, y: match.y } : null;
 }

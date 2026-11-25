@@ -31,7 +31,9 @@ npm run preview
 ## 当前架构
 
 - `src/game/state/GameFlow.ts`：P0 页面状态与计时流程；
-- `src/game/scenes/PrototypeScene.ts`：Phaser 世界层/HUD 层、色盘、拖放与反馈；
+- `src/game/scenes/PrototypeScene.ts`：Phaser 世界层/HUD 层、P4 动态圆环、拖放与反馈；
+- `src/game/focus/FocusEnvironmentController.ts`：鱼群、海浪、海鸥、光斑、泡沫和白云的独立低刺激动效控制器；
+- `src/game/focus/focusConfig.ts`：P4 正式资源、8 个任务角色、圆环色值、时间格式与降低动态开关；
 - `src/game/ui/AppUI.ts`：任务卡、按钮、进度与暂停 DOM 界面；
 - `src/game/task/TaskSelectionExperience.ts`：正式任务页三状态容器与过渡编排；
 - `src/game/task/TaskCarousel.ts`：非循环轮播、惯性、吸附与动态倾斜；
@@ -61,7 +63,15 @@ npm run preview
 5. 将占位纹理工厂替换为 Phaser Loader 加载，但继续使用逻辑 ID；
 6. 对照 Art Bible 检查角色比例、六色、描边、透视和低刺激动效。
 
-岛屿页已使用用户提供的小伴龙、云朵、返回键和拉钩按钮切片；任务选择三步已使用正式 PNG 与 12 条 WAV。计时、庆祝中的角色及岛上建筑仍为程序占位，等待下一轮正式资源整合。
+岛屿页已使用用户提供的小伴龙、云朵、返回键和拉钩按钮切片；任务选择三步已使用正式 PNG 与 12 条 WAV；专注页已接入 8 张正式任务角色、浮岛、环境插画和按钮。庆祝角色及岛上建筑仍为程序占位，等待后续正式资源整合。
+
+## P4 专注页 V2
+
+- 数字倒计时和黄绿色剩余时间环直接读取现有 `GameFlow.focus`；黄环初始 100%，随倒计时缩减，没有创建第二套计时器；
+- 暂停会冻结倒计时与环境 Tween，继续后从现有时间戳恢复；
+- `prefers-reduced-motion` 或 `?reducedMotion=1` 可降低环境和呼吸动效；
+- 专注页没有已批准 BGM，音乐按钮默认静音并保持不可用；
+- 资源映射、缺口和新版数字倒计时需求变更见 `docs/v2/P4-focus-v2-resource-map.md`。
 
 ## 音频策略
 
@@ -87,4 +97,4 @@ npm run preview
 
 ## 测试范围
 
-当前自动化覆盖三阶段 tile 单调扩张、沙/岩地形、footprint 合法性、越界/重叠、36 件目录、V1 存档迁移、跨日重置、轮播边界/倾角/吸附、任务页防重复状态切换及按钮音频优先级。浏览器验收已走通：岛屿→任务三步→长按确认→计时→庆祝→拖放→刷新恢复，以及大岛缩放和平移。
+当前自动化覆盖三阶段 tile 单调扩张、沙/岩地形、footprint 合法性、越界/重叠、36 件目录、V1 存档迁移、跨日重置、轮播边界/倾角/吸附、任务页防重复状态切换、按钮音频优先级、8 个专注角色映射、时间格式与进度换算。浏览器验收已走通：岛屿→任务三步→长按确认→专注计时/暂停/结束确认→庆祝→拖放，以及大岛缩放和平移。

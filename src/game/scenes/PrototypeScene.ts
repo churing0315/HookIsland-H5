@@ -1,8 +1,19 @@
 import Phaser from 'phaser';
+import { fitAssetImage, placedAssetScale } from '../assets/placementDisplay';
 import { createPlaceholderTextures, PLACEHOLDER_KEYS } from '../assets/placeholders';
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { getAsset } from '../data/assetCatalog';
+import { REWARD_BUILDINGS } from '../data/rewardBuildings';
 import { validatePlacement } from '../domain/placement';
+import { FocusEnvironmentController } from '../focus/FocusEnvironmentController';
+import {
+  FOCUS_RING,
+  FOCUS_TEXTURE_PATHS,
+  FOCUS_TEXTURES,
+  focusRemainingRatio,
+  resolveFocusTexture,
+  shouldReduceFocusMotion,
+} from '../focus/focusConfig';
 import { IslandCameraController } from '../map/IslandCameraController';
 import { effectiveMapStage } from '../map/IslandExpansionService';
 import { IslandMapRenderer } from '../map/IslandMapRenderer';
@@ -11,6 +22,8 @@ import type { GameFlow } from '../state/GameFlow';
 import type { GameSnapshot, MapStage, PlacedItem } from '../types';
 
 export class PrototypeScene extends Phaser.Scene {
+  private static readonly FOCUS_INNER_TEXTURE = 'focus-inner-gradient';
+  private static readonly FOCUS_DIAL_TEXTURE = 'focus-dial-hires';
   private flow!: GameFlow;
   private unsubscribe: (() => void) | null = null;
   private worldLayer!: Phaser.GameObjects.Container;
@@ -19,10 +32,16 @@ export class PrototypeScene extends Phaser.Scene {
   private cameraController!: IslandCameraController;
   private mapRenderer!: IslandMapRenderer;
   private renderedScreen: GameSnapshot['screen'] | null = null;
-  private dialGraphics: Phaser.GameObjects.Graphics | null = null;
+  private dialTexture: Phaser.Textures.CanvasTexture | null = null;
+  private focusEnvironment: FocusEnvironmentController | null = null;
 
   constructor() {
     super('prototype');
+  }
+
+  preload(): void {
+    for (const [key, path] of FOCUS_TEXTURE_PATHS) this.load.image(key, path);
+    for (const { runtimeTextureKey, url } of REWARD_BUILDINGS) this.load.image(runtimeTextureKey, url);
   }
 
   create(): void {
@@ -39,6 +58,7 @@ export class PrototypeScene extends Phaser.Scene {
 
     this.unsubscribe = this.flow.subscribe((snapshot) => {
       if (snapshot.screen !== this.renderedScreen) this.render(snapshot);
+      if (snapshot.screen === 'focus') this.focusEnvironment?.setPaused(snapshot.focus?.paused ?? false);
     });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.unsubscribe?.();
@@ -47,17 +67,20 @@ export class PrototypeScene extends Phaser.Scene {
   }
 
   update(): void {
-    if (this.flow.getSnapshot().screen === 'focus' && this.dialGraphics) {
-      this.drawFocusDial(this.flow.getRemainingRatio());
+    if (this.flow.getSnapshot().screen === 'focus' && this.dialTexture) {
+      const focus = this.flow.getSnapshot().focus;
+      if (focus) this.drawFocusDial(focusRemainingRatio(focus.remainingMs, focus.totalMs));
     }
   }
 
   private render(snapshot: GameSnapshot): void {
     this.renderedScreen = snapshot.screen;
+    this.focusEnvironment?.destroy();
+    this.focusEnvironment = null;
     this.tweens.killAll();
     this.worldLayer.removeAll(true);
     this.hudLayer.removeAll(true);
-    this.dialGraphics = null;
+    this.dialTexture = null;
     this.cameraController.setInteractionLocked(false);
 
     switch (snapshot.screen) {
@@ -71,7 +94,7 @@ export class PrototypeScene extends Phaser.Scene {
         this.renderRitual();
         break;
       case 'focus':
-        this.renderFocus();
+        this.renderFocus(snapshot);
         break;
       case 'celebration':
         this.renderCelebration(snapshot.celebrationKind);
@@ -109,29 +132,121 @@ export class PrototypeScene extends Phaser.Scene {
     this.tweens.add({ targets: [left, promise], x: '+=8', duration: 700, yoyo: true, repeat: 1, ease: 'Sine.InOut' });
   }
 
-  private renderFocus(): void {
-    this.prepareFixedScreen(0xfbf7ee);
-    this.dialGraphics = this.add.graphics();
-    this.hudLayer.add(this.dialGraphics);
-    this.drawFocusDial(1);
-    const mascot = this.add.image(545, 205, PLACEHOLDER_KEYS.mascot).setScale(0.96);
-    this.hudLayer.add(mascot);
-    this.tweens.add({ targets: mascot, y: mascot.y - 3, duration: 2_000, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+  private renderFocus(snapshot: GameSnapshot): void {
+    this.cameraController.setEnabled(false);
+    this.cameras.main.setZoom(1).setScroll(0, 0).setBounds(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    this.cameras.main.setBackgroundColor(0x21ade8);
+
+    const background = this.add.graphics();
+    background.fillGradientStyle(0x74dffb, 0x74dffb, 0x21ade8, 0x21ade8, 1);
+    background.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    this.hudLayer.add(background);
+    this.focusEnvironment = new FocusEnvironmentController(this, this.hudLayer);
+
+    const innerCircle = this.add.image(
+      FOCUS_RING.centerX,
+      FOCUS_RING.centerY,
+      this.ensureFocusInnerTexture(),
+    ).setDisplaySize(FOCUS_RING.innerRadius * 2, FOCUS_RING.innerRadius * 2);
+    this.hudLayer.add(innerCircle);
+    this.dialTexture = this.ensureFocusDialTexture();
+    const dialSize = (FOCUS_RING.outerRadius + FOCUS_RING.ringWidth / 2 + 3) * 2;
+    const dial = this.add
+      .image(FOCUS_RING.centerX, FOCUS_RING.centerY, PrototypeScene.FOCUS_DIAL_TEXTURE)
+      .setDisplaySize(dialSize, dialSize);
+    this.hudLayer.add(dial);
+    const focus = snapshot.focus;
+    const remaining = focus ? focusRemainingRatio(focus.remainingMs, focus.totalMs) : 0;
+    this.drawFocusDial(remaining);
+
+    const island = this.add.image(FOCUS_RING.centerX, 203, FOCUS_TEXTURES.island).setScale(FOCUS_RING.islandScale);
+    const mascot = this.add
+      .image(FOCUS_RING.centerX, 225, resolveFocusTexture(focus?.taskId ?? 'book'))
+      .setOrigin(0.5, 1)
+      .setScale(FOCUS_RING.mascotScale);
+    this.hudLayer.add([island, mascot]);
+
+    if (!shouldReduceFocusMotion()) {
+      this.tweens.add({
+        targets: mascot,
+        scaleX: FOCUS_RING.mascotBreathScale,
+        scaleY: FOCUS_RING.mascotBreathScale,
+        duration: 1_400,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.InOut',
+      });
+    }
+
+    const glow = this.add.graphics();
+    glow.lineStyle(12, FOCUS_RING.glowColor, 0.4);
+    glow.strokeCircle(FOCUS_RING.centerX, FOCUS_RING.centerY, FOCUS_RING.innerRadius - 8);
+    this.hudLayer.add(glow);
+    this.focusEnvironment.setPaused(focus?.paused ?? false);
   }
 
-  private drawFocusDial(ratio: number): void {
-    if (!this.dialGraphics) return;
-    const g = this.dialGraphics;
-    g.clear();
-    g.fillStyle(COLORS.elapsed, 1);
-    g.fillCircle(330, 205, 78);
-    if (ratio > 0.002) {
-      g.fillStyle(COLORS.remaining, 1);
-      g.slice(330, 205, 78, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * ratio, false);
-      g.fillPath();
+  private drawFocusDial(remainingRatio: number): void {
+    if (!this.dialTexture) return;
+    const context = this.dialTexture.getContext();
+    const textureScale = 3;
+    const logicalSize = this.dialTexture.width / textureScale;
+    const center = logicalSize / 2;
+    context.setTransform(textureScale, 0, 0, textureScale, 0, 0);
+    context.clearRect(0, 0, logicalSize, logicalSize);
+    context.lineCap = 'round';
+    context.lineWidth = FOCUS_RING.ringWidth;
+    context.strokeStyle = '#1998dc';
+    context.beginPath();
+    context.arc(center, center, FOCUS_RING.outerRadius, 0, Math.PI * 2);
+    context.stroke();
+
+    const progress = Math.max(0, Math.min(1, remainingRatio));
+    const start = -Math.PI / 2;
+    if (progress > 0.001) {
+      const end = start + Math.PI * 2 * progress * (FOCUS_RING.clockwise ? 1 : -1);
+      context.lineWidth = FOCUS_RING.ringWidth;
+      context.strokeStyle = '#f4f587';
+      context.beginPath();
+      context.arc(center, center, FOCUS_RING.outerRadius, start, end, !FOCUS_RING.clockwise);
+      context.stroke();
     }
-    g.lineStyle(4, 0xffffff, 0.82);
-    g.strokeCircle(330, 205, 78);
+    context.lineWidth = FOCUS_RING.whiteStrokeWidth;
+    context.strokeStyle = 'rgba(255,255,255,0.98)';
+    context.beginPath();
+    context.arc(center, center, FOCUS_RING.innerRadius + 2, 0, Math.PI * 2);
+    context.stroke();
+    this.dialTexture.refresh();
+  }
+
+  private ensureFocusDialTexture(): Phaser.Textures.CanvasTexture {
+    const key = PrototypeScene.FOCUS_DIAL_TEXTURE;
+    if (this.textures.exists(key)) return this.textures.get(key) as Phaser.Textures.CanvasTexture;
+    const textureScale = 3;
+    const logicalSize = (FOCUS_RING.outerRadius + FOCUS_RING.ringWidth / 2 + 3) * 2;
+    const texture = this.textures.createCanvas(key, logicalSize * textureScale, logicalSize * textureScale);
+    if (!texture) throw new Error('Unable to create focus dial texture');
+    return texture;
+  }
+
+  private ensureFocusInnerTexture(): string {
+    const key = PrototypeScene.FOCUS_INNER_TEXTURE;
+    if (this.textures.exists(key)) return key;
+    const diameter = FOCUS_RING.innerRadius * 2;
+    const textureScale = 2;
+    const textureDiameter = diameter * textureScale;
+    const texture = this.textures.createCanvas(key, textureDiameter, textureDiameter);
+    if (!texture) return key;
+    const context = texture.getContext();
+    const gradient = context.createLinearGradient(0, 0, 0, textureDiameter);
+    gradient.addColorStop(0, '#71d07c');
+    gradient.addColorStop(1, '#8bcf71');
+    context.clearRect(0, 0, textureDiameter, textureDiameter);
+    context.beginPath();
+    context.arc(textureDiameter / 2, textureDiameter / 2, textureDiameter / 2, 0, Math.PI * 2);
+    context.fillStyle = gradient;
+    context.fill();
+    texture.refresh();
+    return key;
   }
 
   private renderCelebration(kind: 'build' | 'medal'): void {
@@ -147,16 +262,17 @@ export class PrototypeScene extends Phaser.Scene {
     }
   }
 
-  private renderBuild(items: PlacedItem[], stage: MapStage, assetId: string): void {
-    this.prepareMap(stage, items, true);
+  private renderBuild(items: PlacedItem[], stage: MapStage, assetId: string | null): void {
+    this.prepareMap(stage, items, Boolean(assetId));
+    if (!assetId) return;
     const asset = getAsset(assetId);
     const tray = this.add.rectangle(406, 342, 780, 58, COLORS.card, 0.97).setStrokeStyle(2, 0xd8cbb8, 0.76);
     const candidate = this.add
       .image(78, 338, asset.runtimeTextureKey)
-      .setScale(0.62)
       .setInteractive({ useHandCursor: true });
+    candidate.setScale(fitAssetImage(candidate.width, candidate.height, 60, 46));
     const status = this.add
-      .text(128, 338, '拖动圆冠树到合适的草地格', {
+      .text(128, 338, `拖动${asset.name}到合适的空地`, {
         fontFamily: 'PingFang SC, Microsoft YaHei, sans-serif',
         fontSize: '16px',
         color: '#4A3B2A',
@@ -166,10 +282,11 @@ export class PrototypeScene extends Phaser.Scene {
 
     const ghost = this.add
       .image(0, 0, asset.runtimeTextureKey)
-      .setScale(0.74)
       .setAlpha(0.72)
       .setVisible(false)
       .setDepth(10_000);
+    const ghostScale = placedAssetScale(asset, ghost.width, ghost.height);
+    ghost.setScale(ghostScale);
     this.worldLayer.add(ghost);
     this.input.setDraggable(candidate);
     let candidateGrid: { x: number; y: number } | null = null;
@@ -200,7 +317,7 @@ export class PrototypeScene extends Phaser.Scene {
         ghost.clearTint().setAlpha(1);
         this.tweens.add({
           targets: ghost,
-          scale: 0.84,
+          scale: ghostScale * 1.08,
           duration: 260,
           yoyo: true,
           onComplete: () => this.flow.commitPlacement(assetId, candidateGrid!.x, candidateGrid!.y),

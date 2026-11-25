@@ -1,5 +1,6 @@
 import { DAILY_PLANT_LIMIT } from '../config';
 import { GameAudioManager } from '../audio/GameAudioManager';
+import { FOCUS_ASSET_ROOT, formatFocusTime } from '../focus/focusConfig';
 import { effectiveMapStage } from '../map/IslandExpansionService';
 import { MAP_STAGES } from '../map/mapConfig';
 import type { GameFlow } from '../state/GameFlow';
@@ -11,6 +12,7 @@ export class AppUI {
   private snapshot!: GameSnapshot;
   private renderedScreen: GameSnapshot['screen'] | null = null;
   private taskExperience: TaskSelectionExperience | null = null;
+  private focusClockFrame: number | null = null;
   private readonly audio: GameAudioManager;
 
   constructor(
@@ -37,6 +39,7 @@ export class AppUI {
     this.unsubscribe?.();
     this.taskExperience?.destroy();
     this.taskExperience = null;
+    this.stopFocusClock();
     this.root.removeEventListener('click', this.handleClick);
     this.audio.destroy();
   }
@@ -50,6 +53,9 @@ export class AppUI {
     if (action === 'back-island') this.flow.returnToIsland();
     if (action === 'begin-ritual') this.flow.beginRitual();
     if (action === 'toggle-pause') this.flow.togglePause();
+    if (action === 'request-focus-end') this.showFocusEndDialog(true);
+    if (action === 'cancel-focus-end') this.showFocusEndDialog(false);
+    if (action === 'confirm-focus-end') this.flow.returnToIsland();
     if (action === 'camera-zoom-in') window.dispatchEvent(new CustomEvent('hook-island-camera', { detail: 'zoom-in' }));
     if (action === 'camera-zoom-out') window.dispatchEvent(new CustomEvent('hook-island-camera', { detail: 'zoom-out' }));
     if (action === 'camera-reset') window.dispatchEvent(new CustomEvent('hook-island-camera', { detail: 'reset' }));
@@ -58,6 +64,7 @@ export class AppUI {
   private render(): void {
     this.taskExperience?.destroy();
     this.taskExperience = null;
+    this.stopFocusClock();
     this.renderedScreen = this.snapshot.screen;
     this.audio.setScreen(this.snapshot.screen);
     const fastChip = this.snapshot.fastMode ? '<div class="demo-chip">演示加速</div>' : '';
@@ -74,7 +81,8 @@ export class AppUI {
         this.root.innerHTML = `${fastChip}<section class="center-copy" aria-live="polite"><p>我们拉钩</p><h1>说到做到</h1><span>约定正在生效……</span></section>`;
         break;
       case 'focus':
-        this.root.innerHTML = `${fastChip}${this.focusMarkup()}`;
+        this.root.innerHTML = this.focusMarkup();
+        this.startFocusClock();
         break;
       case 'celebration':
         this.root.innerHTML = `${fastChip}${
@@ -84,7 +92,9 @@ export class AppUI {
         }`;
         break;
       case 'build':
-        this.root.innerHTML = `${fastChip}<header class="topbar build-topbar"><div><span class="eyebrow">一次约定 · 一次建造</span><h1>选择合法方格放置</h1></div></header>${this.cameraControlsMarkup()}`;
+        this.root.innerHTML = this.snapshot.selectedAssetId
+          ? `${fastChip}<header class="topbar build-topbar"><div><span class="eyebrow">一次约定 · 一次建造</span><h1>选择合法方格放置</h1></div></header>${this.cameraControlsMarkup()}`
+          : '<section class="center-copy" aria-live="polite"><h1>这个等级的建筑暂时放不下</h1><span>这次未占用建造次数</span><button data-action="back-island">返回小岛</button></section>';
         break;
     }
   }
@@ -142,16 +152,72 @@ export class AppUI {
     const focus = this.snapshot.focus;
     if (!focus) return '';
     return `
-      <header class="focus-header">
-        <span class="eyebrow">我们的约定</span>
-        <h1>${focus.taskName}</h1>
-      </header>
-      <button class="pause-button" data-action="toggle-pause">${focus.paused ? '继续专注' : '暂停一下'}</button>
+      <section class="focus-ui" aria-label="专注计时">
+        ${this.snapshot.fastMode ? '<div class="focus-demo-chip">演示加速</div>' : ''}
+        <div class="focus-message-visual" aria-hidden="true">
+          <img src="/assets/v2/btn-back.png" alt="">
+        </div>
+        <div class="focus-controls">
+          <div class="focus-task-label">${focus.taskName} · ${focus.minutes} 分钟</div>
+          <div class="focus-control-buttons">
+            <button class="focus-icon-button is-disabled" aria-label="专注音乐暂未配置" aria-disabled="true">
+              <img src="${FOCUS_ASSET_ROOT}/focus_btn_music.png" alt="">
+            </button>
+            <button class="focus-icon-button" data-action="request-focus-end" aria-label="结束本次专注">
+              <img src="${FOCUS_ASSET_ROOT}/focus_btn_end.png" alt="">
+            </button>
+            <button class="focus-icon-button ${focus.paused ? 'is-active' : ''}" data-action="toggle-pause" aria-label="${
+              focus.paused ? '继续专注' : '暂停专注'
+            }" aria-pressed="${focus.paused}">
+              <img src="${FOCUS_ASSET_ROOT}/focus_btn_pause.png" alt="">
+            </button>
+          </div>
+        </div>
+        <output class="focus-time" aria-live="off">${formatFocusTime(focus.remainingMs)}</output>
+      </section>
       ${
         focus.paused
-          ? '<section class="pause-card" aria-live="polite"><strong>小树在等你</strong><span>准备好了就继续吧</span></section>'
+          ? '<section class="focus-pause-card" aria-live="polite"><strong>先休息一下</strong><span>计时已经暂停，准备好了再继续</span><button data-action="toggle-pause">继续专注</button></section>'
           : ''
       }
+      <section class="focus-end-dialog" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="focus-end-title">
+        <div class="focus-end-card">
+          <strong id="focus-end-title">要结束这次专注吗？</strong>
+          <span>现在离开不会获得建造机会。</span>
+          <div>
+            <button data-action="cancel-focus-end">继续专注</button>
+            <button class="is-danger" data-action="confirm-focus-end">结束并返回</button>
+          </div>
+        </div>
+      </section>
     `;
+  }
+
+  private startFocusClock(): void {
+    const update = (): void => {
+      const snapshot = this.flow.getSnapshot();
+      if (snapshot.screen !== 'focus' || !snapshot.focus) {
+        this.focusClockFrame = null;
+        return;
+      }
+      const output = this.root.querySelector<HTMLOutputElement>('.focus-time');
+      if (output) output.value = formatFocusTime(snapshot.focus.remainingMs);
+      this.focusClockFrame = window.requestAnimationFrame(update);
+    };
+    update();
+  }
+
+  private stopFocusClock(): void {
+    if (this.focusClockFrame === null) return;
+    window.cancelAnimationFrame(this.focusClockFrame);
+    this.focusClockFrame = null;
+  }
+
+  private showFocusEndDialog(show: boolean): void {
+    const dialog = this.root.querySelector<HTMLElement>('.focus-end-dialog');
+    if (!dialog) return;
+    dialog.classList.toggle('is-open', show);
+    dialog.setAttribute('aria-hidden', String(!show));
+    if (show) dialog.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
   }
 }

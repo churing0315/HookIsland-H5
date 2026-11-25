@@ -1,4 +1,5 @@
 import type { Footprint, TerrainType } from '../types';
+import { REWARD_BUILDINGS } from './rewardBuildings';
 
 export type AssetCategory = 'nature' | 'building' | 'facility' | 'animal';
 export type UnlockBatch = 'base' | 'focus-30' | 'focus-60';
@@ -55,6 +56,16 @@ export const ASSET_CATALOG: AssetCatalogEntry[] = [
   { id: 'cat', name: '小猫', category: 'animal', footprint: { width: 1, height: 1 }, allowedTerrains: ['grass'], unlockBatch: 'focus-60', runtimeTextureKey: placeholder, runtimeStatus: 'placeholder' },
 ];
 
+const REWARD_ASSETS = new Map(REWARD_BUILDINGS.map((building): [string, AssetCatalogEntry] => [
+  building.id,
+  {
+    ...building,
+    category: building.tier === 1 ? 'facility' : 'building',
+    unlockBatch: 'base',
+    runtimeStatus: 'ready',
+  },
+]));
+
 export function getAsset(assetId: string): AssetCatalogEntry {
-  return ASSET_CATALOG.find((asset) => asset.id === assetId) ?? ASSET_CATALOG[0];
+  return REWARD_ASSETS.get(assetId) ?? ASSET_CATALOG.find((asset) => asset.id === assetId) ?? ASSET_CATALOG[0];
 }

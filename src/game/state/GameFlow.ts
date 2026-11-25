@@ -1,10 +1,12 @@
 import { DAILY_FOCUS_LIMIT, DAILY_PLANT_LIMIT, FAST_MODE } from '../config';
 import { getAsset } from '../data/assetCatalog';
 import { TASKS } from '../data/tasks';
-import { resolveStoredMapStage, unlockedTileSets } from '../map/IslandExpansionService';
+import { drawBuildingReward } from '../domain/buildingRewards';
+import { validatePlacement } from '../domain/placement';
+import { effectiveMapStage, resolveStoredMapStage, unlockedTileSets } from '../map/IslandExpansionService';
 import { gridToWorldCenter } from '../map/mapConfig';
 import { loadGameData, saveGameData } from '../storage';
-import type { GameSnapshot, PlacedItem } from '../types';
+import type { FocusMinutes, GameSnapshot, PlacedItem } from '../types';
 
 type Listener = (snapshot: GameSnapshot) => void;
 
@@ -29,7 +31,7 @@ export class GameFlow {
       focus: null,
       data: loadGameData(),
       fastMode: FAST_MODE,
-      selectedAssetId: 'tree_round',
+      selectedAssetId: null,
       celebrationKind: 'build',
     };
   }
@@ -52,7 +54,7 @@ export class GameFlow {
 
   returnToIsland(): void {
     this.clearTimers();
-    this.patch({ screen: 'island', focus: null });
+    this.patch({ screen: 'island', focus: null, selectedAssetId: null });
   }
 
   selectTask(taskId: string): void {
@@ -61,7 +63,7 @@ export class GameFlow {
     this.patch({ selectedTaskId: taskId });
   }
 
-  selectMinutes(minutes: 5 | 10 | 15 | 20): void {
+  selectMinutes(minutes: FocusMinutes): void {
     this.patch({ selectedMinutes: minutes });
   }
 
@@ -104,7 +106,11 @@ export class GameFlow {
   commitPlacement(assetId: string, gridX: number, gridY: number): void {
     const task = TASKS.find((item) => item.id === this.snapshot.selectedTaskId);
     const minutes = this.snapshot.selectedMinutes;
-    if (this.snapshot.screen !== 'build' || !task || !minutes) return;
+    const { data: currentData, selectedAssetId } = this.snapshot;
+    if (this.snapshot.screen !== 'build' || !task || !minutes || assetId !== selectedAssetId) return;
+    if (currentData.daily.planted >= DAILY_PLANT_LIMIT || !validatePlacement({
+      assetId, gridX, gridY, stage: effectiveMapStage(currentData.mapStage), items: currentData.placedItems,
+    }).valid) return;
 
     const asset = getAsset(assetId);
     const center = gridToWorldCenter(gridX, gridY, asset.footprint);
@@ -143,6 +149,7 @@ export class GameFlow {
       data,
       selectedTaskId: null,
       selectedMinutes: null,
+      selectedAssetId: null,
       focus: null,
       celebrationKind: 'build',
     });
@@ -206,7 +213,9 @@ export class GameFlow {
           3_000,
         );
       } else {
-        this.patch({ screen: 'celebration', celebrationKind: 'build' });
+        const { mapStage, placedItems } = this.snapshot.data;
+        const selectedAssetId = drawBuildingReward(focus.minutes, effectiveMapStage(mapStage), placedItems);
+        this.patch({ screen: 'celebration', celebrationKind: 'build', selectedAssetId });
         this.transitionTimer = window.setTimeout(() => this.patch({ screen: 'build' }), 3_000);
       }
     }

@@ -1034,6 +1034,214 @@ button {
   font-size: 14px;
 }
 
+.focus-ui {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  color: #fff;
+  pointer-events: none;
+}
+
+.focus-message-visual {
+  position: absolute;
+  top: 3.2cqh;
+  left: 2.4cqw;
+  width: 5.2cqw;
+  aspect-ratio: 117 / 113;
+  opacity: 0.98;
+}
+
+.focus-message-visual img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.focus-controls {
+  position: absolute;
+  top: 2.5cqh;
+  right: 1.8cqw;
+  display: grid;
+  width: 18cqw;
+  gap: 2.2cqh;
+}
+
+.focus-task-label {
+  display: grid;
+  min-height: 9.6cqh;
+  place-items: center;
+  padding: 0 1.4cqw;
+  border-radius: 999px;
+  background: rgba(45, 177, 224, 0.42);
+  color: #fff;
+  font-size: clamp(12px, 1.55cqw, 20px);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-align: center;
+  text-shadow: 0 2px 0 rgba(25, 152, 220, 0.34);
+  white-space: nowrap;
+}
+
+.focus-control-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 4.2cqw);
+  justify-content: end;
+  gap: 1cqw;
+}
+
+.focus-icon-button {
+  display: grid;
+  width: 4.2cqw;
+  aspect-ratio: 1;
+  flex: 0 0 auto;
+  place-items: center;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 50%;
+  background: rgba(45, 177, 224, 0.42);
+  box-shadow: none;
+  cursor: pointer;
+  transition: transform 80ms ease, opacity 160ms ease;
+}
+
+.focus-icon-button img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  filter: brightness(0.93) saturate(0.92);
+}
+
+.focus-icon-button:active {
+  transform: scale(0.9);
+}
+
+.focus-icon-button.is-active {
+  outline: 3px solid rgba(252, 255, 179, 0.86);
+  outline-offset: 2px;
+}
+
+.focus-icon-button.is-disabled {
+  cursor: default;
+  opacity: 0.58;
+}
+
+.focus-time {
+  position: absolute;
+  top: 76.5cqh;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #fff;
+  font-family: "Helvetica Neue", "PingFang SC", sans-serif;
+  font-size: clamp(42px, 7cqw, 82px);
+  font-weight: 200;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-shadow: 0 3px 12px rgba(25, 152, 220, 0.18);
+}
+
+.focus-demo-chip {
+  position: absolute;
+  top: 18cqh;
+  left: 2.4cqw;
+  padding: 1.3cqh 1.2cqw;
+  border-radius: 999px;
+  background: rgba(25, 152, 220, 0.46);
+  color: #fff;
+  font-size: clamp(10px, 1.3cqw, 14px);
+  font-weight: 700;
+}
+
+.focus-pause-card,
+.focus-end-dialog {
+  position: absolute;
+  inset: 0;
+  z-index: 45;
+  display: grid;
+  place-items: center;
+  background: rgba(20, 119, 178, 0.3);
+  backdrop-filter: blur(4px);
+  pointer-events: auto;
+}
+
+.focus-pause-card {
+  inset: 25cqh 30cqw;
+  display: flex;
+  min-width: 300px;
+  flex-direction: column;
+  gap: 1.5cqh;
+  border-radius: 3cqw;
+  background: rgba(255, 255, 255, 0.94);
+  color: #2c78a0;
+  box-shadow: 0 16px 46px rgba(20, 119, 178, 0.2);
+}
+
+.focus-pause-card strong,
+.focus-end-card strong {
+  font-size: clamp(19px, 2.6cqw, 30px);
+}
+
+.focus-pause-card span,
+.focus-end-card span {
+  font-size: clamp(12px, 1.5cqw, 17px);
+}
+
+.focus-pause-card button,
+.focus-end-card button {
+  min-height: 9cqh;
+  padding: 0 2cqw;
+  border-radius: 999px;
+  background: #53c7e8;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.focus-end-dialog {
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 180ms ease, visibility 180ms ease;
+}
+
+.focus-end-dialog.is-open {
+  visibility: visible;
+  opacity: 1;
+}
+
+.focus-end-card {
+  display: flex;
+  width: min(46cqw, 520px);
+  min-width: 340px;
+  flex-direction: column;
+  align-items: center;
+  gap: 2.4cqh;
+  padding: 5cqh 4cqw;
+  border-radius: 3cqw;
+  background: rgba(255, 255, 255, 0.97);
+  color: #2c78a0;
+  text-align: center;
+  box-shadow: 0 20px 56px rgba(20, 119, 178, 0.24);
+}
+
+.focus-end-card > div {
+  display: flex;
+  gap: 1.6cqw;
+}
+
+.focus-end-card button.is-danger {
+  background: #ed806f;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .focus-icon-button,
+  .focus-end-dialog {
+    transition: none;
+  }
+}
+
 .build-topbar {
   justify-content: center;
   text-align: center;
