@@ -902,6 +902,295 @@ button {
   color: white;
 }
 
+.pact-ritual {
+  position: absolute;
+  z-index: 100;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: auto;
+  touch-action: none;
+  animation: pact-ritual-finish 2600ms linear both;
+}
+
+.pact-ritual-stage {
+  --pact-scale: 1;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 812px;
+  height: 375px;
+  transform: translate(-50%, -50%) scale(var(--pact-scale));
+  transform-origin: center;
+}
+
+.pact-ritual-dim {
+  position: absolute;
+  inset: 0;
+  background: rgba(35, 62, 123, 0.5);
+  animation: pact-dim-in 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+.pact-ritual-emblem,
+.pact-ritual-dots {
+  position: absolute;
+  top: 57.5px;
+  left: 261px;
+  width: 268px;
+  height: 245px;
+}
+
+.pact-ritual-emblem {
+  transform-origin: center;
+  animation: pact-emblem-in 350ms 150ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.pact-ritual-shape {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  display: block;
+  width: 268px;
+  height: 245px;
+}
+
+.pact-ritual-dot {
+  position: absolute;
+  border-radius: 50%;
+  background: #f6f2df;
+  animation: pact-dot-pop 780ms var(--pact-dot-delay) ease-out both;
+}
+
+.pact-ritual-dot-upper {
+  --pact-dot-delay: 15ms;
+  top: 49px;
+  left: 5.4px;
+  width: 7.3px;
+  height: 6px;
+}
+
+.pact-ritual-dot-lower-small {
+  --pact-dot-delay: 65ms;
+  top: 214px;
+  left: 235.6px;
+  width: 9.4px;
+  height: 8.4px;
+}
+
+.pact-ritual-dot-lower-large {
+  --pact-dot-delay: 45ms;
+  top: 197.4px;
+  left: 251px;
+  width: 14px;
+  height: 17.5px;
+}
+
+.pact-ritual-mask {
+  position: absolute;
+  z-index: 2;
+  top: 3.5px;
+  left: 3.5px;
+  width: 261px;
+  height: 238px;
+  overflow: hidden;
+  -webkit-mask-image: url('/assets/pact/pact_hand_mask.png');
+  mask-image: url('/assets/pact/pact_hand_mask.png');
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+}
+
+.pact-ritual-light-fade {
+  position: absolute;
+  z-index: 1;
+  top: -2.5px;
+  left: 5.5px;
+  width: 250px;
+  height: 243px;
+  opacity: 0;
+  animation: pact-light-in 200ms 300ms ease-out both;
+}
+
+.pact-ritual-light {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: center;
+  animation: pact-light-spin 5143ms 300ms linear infinite;
+}
+
+.pact-hand-entry {
+  position: absolute;
+}
+
+.pact-hand-entry-right {
+  z-index: 2;
+  top: 69.2px;
+  left: 115.8px;
+  width: 164px;
+  height: 134.4px;
+  animation: pact-hand-right-in 600ms 500ms both;
+}
+
+.pact-hand-entry-left {
+  z-index: 3;
+  top: 75.8px;
+  left: -34.6px;
+  width: 172px;
+  height: 149.8px;
+  animation: pact-hand-left-in 600ms 500ms both;
+}
+
+.pact-hand-tug {
+  width: 100%;
+  height: 100%;
+}
+
+.pact-hand-tug-right {
+  animation: pact-hand-right-tug 500ms 1100ms both;
+}
+
+.pact-hand-tug-left {
+  animation: pact-hand-left-tug 500ms 1100ms both;
+}
+
+.pact-hand {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.pact-emphasis {
+  position: absolute;
+  z-index: 4;
+  opacity: 0;
+  transform-origin: center bottom;
+  animation: pact-emphasis-in 250ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.pact-emphasis-01 {
+  top: 52.5px;
+  left: 89.1px;
+  width: 17.8px;
+  height: auto;
+  animation-delay: 1600ms;
+}
+
+.pact-emphasis-02 {
+  top: 40.7px;
+  left: 141.5px;
+  width: 23.7px;
+  height: auto;
+  animation-delay: 1700ms;
+}
+
+.pact-emphasis-03 {
+  top: 24.1px;
+  left: 105.7px;
+  width: 29.9px;
+  height: auto;
+  animation-delay: 1800ms;
+}
+
+.pact-ritual.is-reduced-motion {
+  animation: pact-ritual-reduced-finish 1300ms linear both;
+}
+
+.pact-ritual.is-reduced-motion .pact-ritual-emblem,
+.pact-ritual.is-reduced-motion .pact-ritual-dots,
+.pact-ritual.is-reduced-motion .pact-ritual-light-fade {
+  animation: pact-static-fade-in 250ms ease-out both;
+}
+
+.pact-ritual.is-reduced-motion .pact-ritual-light,
+.pact-ritual.is-reduced-motion .pact-ritual-dot,
+.pact-ritual.is-reduced-motion .pact-hand-entry,
+.pact-ritual.is-reduced-motion .pact-hand-tug,
+.pact-ritual.is-reduced-motion .pact-emphasis {
+  animation: none;
+  opacity: 1;
+  transform: none;
+}
+
+@keyframes pact-ritual-finish {
+  0%, 90.38% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes pact-ritual-reduced-finish {
+  0%, 80.77% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes pact-dim-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pact-emblem-in {
+  0% { opacity: 0; transform: scale(0); }
+  45% { opacity: 1; }
+  75% { opacity: 1; transform: scale(1.06); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pact-dot-pop {
+  0% { opacity: 1; transform: scale(0); }
+  22% { transform: scale(1.25); }
+  36% { transform: scale(0.94); }
+  48%, 72% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.75); }
+}
+
+@keyframes pact-static-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pact-light-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pact-light-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* The intermediate keyframes match the reference pose at the badge edges. */
+@keyframes pact-hand-left-in {
+  from { transform: translateX(-138px); animation-timing-function: ease-in; }
+  40% { transform: translateX(-75.4px); animation-timing-function: ease-out; }
+  to { transform: translateX(0); }
+}
+
+@keyframes pact-hand-right-in {
+  from { transform: translateX(146px); animation-timing-function: ease-in; }
+  40% { transform: translateX(80.6px); animation-timing-function: ease-out; }
+  to { transform: translateX(0); }
+}
+
+@keyframes pact-hand-left-tug {
+  0% { transform: translateY(0); animation-timing-function: ease-in; }
+  36% { transform: translateY(18px); animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1); }
+  78% { transform: translateY(-4px); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes pact-hand-right-tug {
+  0% { transform: translateY(0); animation-timing-function: ease-in; }
+  36% { transform: translateY(14px); animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1); }
+  78% { transform: translateY(-3px); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes pact-emphasis-in {
+  from { opacity: 0; transform: translateY(12px) scale(0); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 .pressable {
   transform-origin: center;
 }

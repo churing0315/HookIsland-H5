@@ -5,6 +5,7 @@ import { effectiveMapStage } from '../map/IslandExpansionService';
 import { MAP_STAGES } from '../map/mapConfig';
 import type { GameFlow } from '../state/GameFlow';
 import { TaskSelectionExperience } from '../task/TaskSelectionExperience';
+import { PactRitualOverlay } from '../task/PactRitualOverlay';
 import type { GameSnapshot } from '../types';
 
 export class AppUI {
@@ -12,6 +13,7 @@ export class AppUI {
   private snapshot!: GameSnapshot;
   private renderedScreen: GameSnapshot['screen'] | null = null;
   private taskExperience: TaskSelectionExperience | null = null;
+  private ritualOverlay: PactRitualOverlay | null = null;
   private focusClockFrame: number | null = null;
   private readonly audio: GameAudioManager;
 
@@ -27,6 +29,12 @@ export class AppUI {
     this.root.addEventListener('click', this.handleClick);
     this.unsubscribe = this.flow.subscribe((snapshot) => {
       this.snapshot = snapshot;
+      if (snapshot.screen === 'ritual' && this.taskExperience && this.renderedScreen === 'task-select') {
+        this.renderedScreen = 'ritual';
+        this.audio.setScreen('ritual');
+        this.mountRitualOverlay();
+        return;
+      }
       if (snapshot.screen === 'task-select' && this.taskExperience && this.renderedScreen === 'task-select') {
         this.taskExperience.syncSnapshot(snapshot);
         return;
@@ -37,6 +45,8 @@ export class AppUI {
 
   destroy(): void {
     this.unsubscribe?.();
+    this.ritualOverlay?.destroy();
+    this.ritualOverlay = null;
     this.taskExperience?.destroy();
     this.taskExperience = null;
     this.stopFocusClock();
@@ -62,6 +72,8 @@ export class AppUI {
   };
 
   private render(): void {
+    this.ritualOverlay?.destroy();
+    this.ritualOverlay = null;
     this.taskExperience?.destroy();
     this.taskExperience = null;
     this.stopFocusClock();
@@ -78,7 +90,8 @@ export class AppUI {
         this.taskExperience.mount();
         break;
       case 'ritual':
-        this.root.innerHTML = `${fastChip}<section class="center-copy" aria-live="polite"><p>我们拉钩</p><h1>说到做到</h1><span>约定正在生效……</span></section>`;
+        this.root.innerHTML = fastChip;
+        this.mountRitualOverlay();
         break;
       case 'focus':
         this.root.innerHTML = this.focusMarkup();
@@ -97,6 +110,14 @@ export class AppUI {
           : '<section class="center-copy" aria-live="polite"><h1>这个等级的建筑暂时放不下</h1><span>这次未占用建造次数</span><button data-action="back-island">返回小岛</button></section>';
         break;
     }
+  }
+
+  private mountRitualOverlay(): void {
+    if (this.ritualOverlay) return;
+    this.ritualOverlay = new PactRitualOverlay(this.root, {
+      onComplete: () => this.flow.completeRitual(),
+    });
+    this.ritualOverlay.mount();
   }
 
   private islandMarkup(): string {

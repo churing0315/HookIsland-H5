@@ -72,14 +72,18 @@ export class GameFlow {
   }
 
   beginRitual(): void {
-    if (!this.canBeginRitual()) return;
-    this.patch({ screen: 'ritual' });
-    this.transitionTimer = window.setTimeout(() => this.startFocus(), 2_000);
+    this.confirmContract();
   }
 
   confirmContract(): boolean {
     if (this.snapshot.screen !== 'task-select' || !this.canBeginRitual()) return false;
     this.clearTimers();
+    this.patch({ screen: 'ritual' });
+    return true;
+  }
+
+  completeRitual(): boolean {
+    if (this.snapshot.screen !== 'ritual') return false;
     this.startFocus();
     return true;
   }

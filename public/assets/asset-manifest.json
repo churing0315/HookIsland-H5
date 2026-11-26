@@ -105,6 +105,23 @@
       "note": "用户提供的 P4 专注页正式切图；运行时按任务 ID 映射 8 个角色，独立源文件完整保留"
     },
     {
+      "id": "pact-ritual.ui",
+      "sourcePath": "assets-source/pact/",
+      "runtimePath": "/assets/pact/",
+      "files": [
+        "pact_hand_shape.png",
+        "pact_hand_mask.png",
+        "pact_hand_light.png",
+        "pact_hand_left.png",
+        "pact_hand_right.png",
+        "pact_illust_01.png",
+        "pact_illust_02.png",
+        "pact_illust_03.png"
+      ],
+      "replaceable": false,
+      "note": "拉钩确认后的全屏仪式动画；所有内部元素由 pact_hand_mask 裁切，不播放音效"
+    },
+    {
       "id": "catalog.v2.36-items",
       "sourcePath": "src/game/data/assetCatalog.ts",
       "runtimePath": null,

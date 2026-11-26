@@ -4,8 +4,6 @@ import { COLORS } from '../config';
 export const PLACEHOLDER_KEYS = {
   mascot: 'placeholder-mascot',
   tree: 'placeholder-tree',
-  landmarkHouse: 'placeholder-landmark-house',
-  landmarkPost: 'placeholder-landmark-post',
 } as const;
 
 export function createPlaceholderTextures(scene: Phaser.Scene): void {
@@ -32,33 +30,5 @@ export function createPlaceholderTextures(scene: Phaser.Scene): void {
     tree.fillCircle(25, 23, 13);
     tree.generateTexture(PLACEHOLDER_KEYS.tree, 68, 78);
     tree.destroy();
-  }
-
-  if (!scene.textures.exists(PLACEHOLDER_KEYS.landmarkHouse)) {
-    const house = scene.add.graphics();
-    house.fillStyle(0xfff3d0, 1);
-    house.fillRoundedRect(12, 30, 72, 48, 12);
-    house.fillStyle(0xf08b4f, 1);
-    house.fillTriangle(4, 35, 48, 4, 92, 35);
-    house.fillStyle(0x9d623c, 1);
-    house.fillRoundedRect(40, 50, 18, 28, 7);
-    house.fillStyle(0xffffff, 0.8);
-    house.fillCircle(26, 51, 7);
-    house.generateTexture(PLACEHOLDER_KEYS.landmarkHouse, 96, 88);
-    house.destroy();
-  }
-
-  if (!scene.textures.exists(PLACEHOLDER_KEYS.landmarkPost)) {
-    const post = scene.add.graphics();
-    post.fillStyle(0xfff5db, 1);
-    post.fillRoundedRect(10, 28, 76, 48, 12);
-    post.fillStyle(0x4c9be8, 1);
-    post.fillRoundedRect(8, 16, 80, 28, 12);
-    post.fillStyle(0xfec845, 1);
-    post.fillRoundedRect(34, 45, 28, 12, 5);
-    post.fillStyle(0xed4836, 1);
-    post.fillRoundedRect(65, 52, 20, 17, 4);
-    post.generateTexture(PLACEHOLDER_KEYS.landmarkPost, 96, 84);
-    post.destroy();
   }
 }

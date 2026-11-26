@@ -1,57 +1,60 @@
-# P4 Focus V2 Design QA
+# 拉钩仪式动画 · Design QA
 
-- source visual truth: `assets-source/focus-v2/专注页面.png`
-- implementation screenshot: `docs/qa/focus-v2-implementation.jpg`
-- full comparison: `docs/qa/focus-v2-side-by-side.jpg`
-- focused ring comparison: `docs/qa/focus-v2-ring-comparison.jpg`
-- focused controls comparison: `docs/qa/focus-v2-controls-comparison.jpg`
-- browser viewport: 828×391 CSS px; game viewport: 812×375 CSS px; device scale factor 1
-- source pixels: 2338×1080, normalized to 812×375 for comparison
-- implementation pixels: 812×375
-- state: source = 读绘本/15 分钟/剩余 03:22；implementation = 做运动/20 分钟/剩余 00:16（任务、文案和进度差异为真实运行状态）
+- 视觉稿：用户提供的《拉勾界面.png》，归一化副本见 `docs/qa/pact-ritual-source-812x375.png`。
+- implementation screenshot path: `docs/qa/pact-ritual-implementation.png`
+- comparison image path: `docs/qa/pact-ritual-comparison.png`
+- viewport: browser viewport 828 × 391 CSS px；游戏内容区 812 × 375 CSS px
+- source pixels: 2338 × 1080，归一化为 812 × 375
+- implementation pixels: 828 × 391 截图裁出 812 × 375 游戏内容区
+- density normalization: 两侧均以 812 × 375、deviceScaleFactor 1 对比
+- state: 长按“拉钩”完成后、强调符号全部出现、整体淡出前的最终合成帧
 
-**Full-view comparison evidence**
+## Full-view comparison evidence
 
-- 中心轴、圆环垂直位置、倒计时基线、左上图标和右上控件区域与视觉稿一致。
-- 海洋渐变、左右白云、海浪、鱼群、海鸥、光斑和泡沫均处于内容层下方，没有遮挡计时器和按钮。
-- 2026-11-25 复核中按反馈再次缩小浮岛与角色；海鸥以 100% 透明度从左侧中线入场并斜向顶部三分之一出场，白云执行 0%→100%→0% 的淡入、横移、淡出循环。
+`docs/qa/pact-ritual-comparison.png` 将视觉稿和浏览器实现并排放在同一张图中。中心徽章位置、约 268 × 245 的主体尺寸、手部交汇关系、右手在下/左手在上、三枚强调符号弧形分布、奶油色放射光芒和 `#233E7B` 50% 蒙层均与规格一致。确认任务页在动画期间保留于蒙层下，未提前切换专注页。
 
-**Focused comparison evidence**
+## Focused region comparison evidence
 
-- 圆环：深蓝底环、黄绿色剩余时间环、加粗白圈、绿色渐变内圈、正式浮岛/角色及上层发光圈顺序正确。黄环初始满圈并随倒计时缩减；任务差异导致角色姿态不同，属于配置驱动的预期结果。
-- 控件：任务标签和三个圆形按钮均在 812px 边界内；按钮中心距、标签宽度与视觉稿接近。音乐按钮因缺少已批准的专注 BGM而保持静音不可用。
+未另做局部裁切：归一化后的中心徽章占画面高度约 65%，切图边缘、白色描边、遮罩裁切、手部层级和强调符号在全景并排图中已经能以原始 CSS 像素清楚判断；另行放大不会增加有效证据。
 
-**Required fidelity surfaces**
+## Required fidelity surfaces
 
-- Fonts and typography: 倒计时使用细字重等宽数字；任务标签使用项目中文 fallback。源稿字体未单独提供，当前差异为可接受 P3。
-- Spacing and layout rhythm: 812×375 下无裁切或溢出，中心圆环和时间保持清晰层级。
-- Colors and visual tokens: 背景、进度环、内圈和发光圈使用规格色值；透明度保持低刺激。
-- Image quality and asset fidelity: 所有可见插画与按钮来自正式 PNG；圆环和内圈改用 3×/2× Canvas 纹理绘制以改善边缘清晰度；未以占位图、emoji 或手绘 SVG 冒充。
-- Copy and content: 任务名、分钟数和 `mm:ss` 均读取真实契约状态。
+- Fonts and typography: 仪式动画本身无可见文字；底层任务页沿用现有正式实现，无新增字体或排版漂移。
+- Spacing and layout rhythm: 徽章中心约 (395, 180)，主体、双手和强调符号的位置与规格坐标一致；812 × 375 横屏下无裁切或溢出。
+- Colors and visual tokens: 蒙层使用 `#233E7B` @ 50%；徽章、光芒、双手和强调符号全部使用用户提供的原始 PNG。
+- Image quality and asset fidelity: 8 张运行时切图均为原图接入；内部动画内容受 `pact_hand_mask.png` 几何遮罩裁切，白描边完整，无 CSS/HTML 替代插画。
+- Copy and content: 仪式无新增文案；无提示文字泄漏到视觉层。
 
-**Browser and interaction verification**
+## Findings
 
-- 真实浏览器完成任务选择 → 长按确认 → 专注页。
-- 暂停前后均为 `00:16`，确认真实计时冻结；继续后恢复。
-- 结束按钮显示二次确认；取消继续计时，确认返回岛屿且不发放建造奖励。
-- `?fast=1` 完成后进入原庆祝/建造链路。
-- 控制台错误 0；HTTP 失败 0。
+- 无 P0/P1/P2 问题。
+- [P3] 视觉稿中的背景高斯模糊和徽章外侧奶油色圆点/柔光未实现。动画规格将两者标为可选打磨项，且默认可不做；不影响当前验收。
 
-**Open Questions / P3 follow-up**
+## Interaction and runtime checks
 
-- 左上正式“消息”图标和功能尚未提供；当前复用外观匹配的公共返回图，仅展示不交互。
-- 专注 BGM 尚未提供，音乐按钮保持默认静音不可用。
-- 微信 WebView 与 iOS/Android 真机性能仍需实机回归。
+- 已验证：岛屿 → 任务选择 → 时长选择 → 长按 1 秒确认 → 拉钩仪式 → 自动进入专注计时。
+- 已验证：蒙层先出现、徽章从中心弹出、双手滑入并下压回弹、三枚强调符号依次出现、光芒持续旋转、结束后跳转。
+- 已验证：`?reducedMotion=1` 使用静态合成帧降级，并在约 1.3 秒后进入专注计时。
+- 已验证：动画期间底层控件不可操作；组件销毁后无残留。
+- 浏览器控制台错误/警告：0。
 
-**Comparison history**
+## Comparison history
 
-1. Pass 1: 圆环/浮岛偏大、右上按钮组在 812px 下越界。
-2. Fix: 移除桌面最小宽度约束，改为 812×375 容器单位；缩小圆环与浮岛。
-3. Pass 2: Phaser 圆形渐变出现扇形色带。
-4. Fix: 改为运行时 Canvas 渐变纹理，保留代码绘制要求并提高角色清晰度。
-5. Pass 3: 并排及聚焦区域复核，无剩余 P0/P1/P2 视觉问题。
-6. Pass 4（2026-11-25）: 反馈指出海鸥与白云透明度、黄环方向、白圈粗细、浮岛/角色比例和圆圈锐度仍需修正。
-7. Fix: 海鸥改为全不透明左中线→顶部三分之一斜飞；白云改为完整淡入/横移/淡出；黄环改为剩余时间；白圈加粗至 7px；浮岛/角色缩小；圆环改为 3× 高分辨率 Canvas 纹理。
-8. Pass 5: 812×375 浏览器截图与同尺寸视觉稿并排复核，黄环、白圈、中心素材比例和圆圈清晰度无剩余 P0/P1/P2 差异；暂停前后均为 `00:16`。
+- Pass 1: 同尺寸并排比较未发现可执行的 P0/P1/P2 视觉差异，因此未触发修复迭代。可选的模糊与装饰项记录为 P3。
+
+## Implementation checklist
+
+- [x] 任务确认完成后进入 `ritual` 状态，不提前启动专注计时。
+- [x] 保留任务确认页作为蒙层下背景。
+- [x] 按规格完成 2.6 秒时间线与 1.3 秒 reduced-motion 降级。
+- [x] 完成资源登记、清理逻辑、单元测试、生产构建和浏览器验收。
+
+## 双手和强调符号坐标复验
+
+以用户补充的两张 2338 × 1080 参考帧为准，按 812 × 375 对照双手从徽章边缘探入、双手交汇后弹出符号这两个阶段。入场截图取自连续播放过程，可能与参考帧有少量时间差。
+
+旧版双手交叠过多，强调符号中间偏小、右侧偏大。此次重新量取两只手的尺寸和落点，加入贴近遮罩边缘的入场关键帧，并校准符号从左到右为 01、03、02。浏览器对照确认三枚符号和交汇姿势与参考图对齐，常规模式完整播放后自动启动倒计时，控制台未记录错误。
+
+后续补上左上和右下的三个装饰圆点。圆点随徽章出场，缩放回弹后淡出。
 
 final result: passed

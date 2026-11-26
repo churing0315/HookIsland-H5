@@ -23,10 +23,13 @@ describe('orthogonal footprint placement', () => {
     expect(validatePlacement({ assetId: 'tree_round', gridX: 6, gridY: 5, stage: 0, items: [] }).valid).toBe(true);
   });
 
-  it('rejects water, overlap, and landmark cells', () => {
+  it('rejects water and overlap with placed items', () => {
     expect(validatePlacement({ assetId: 'tree_round', gridX: 0, gridY: 0, stage: 0, items: [] }).reason).toBe('outside-map');
     expect(validatePlacement({ assetId: 'tree_round', gridX: 6, gridY: 5, stage: 0, items: [placed] }).reason).toBe('overlap');
-    expect(validatePlacement({ assetId: 'tree_round', gridX: 8, gridY: 4, stage: 0, items: [] }).reason).toBe('overlap');
+  });
+
+  it.each([[8, 4], [12, 6]])('allows building on former starter landmark cells (%i, %i)', (gridX, gridY) => {
+    expect(validatePlacement({ assetId: 'tree_round', gridX, gridY, stage: 0, items: [] }).valid).toBe(true);
   });
 
   it('enforces terrain constraints on stage 2 tiles', () => {

@@ -124,12 +124,7 @@ export class PrototypeScene extends Phaser.Scene {
   }
 
   private renderRitual(): void {
-    this.prepareFixedScreen(COLORS.card);
-    const left = this.add.image(340, 190, PLACEHOLDER_KEYS.mascot).setScale(0.92);
-    const promise = this.add.circle(455, 190, 28, COLORS.primary, 1);
-    const line = this.add.rectangle(402, 190, 80, 12, COLORS.mascotBrown, 1).setOrigin(0.5);
-    this.hudLayer.add([left, line, promise]);
-    this.tweens.add({ targets: [left, promise], x: '+=8', duration: 700, yoyo: true, repeat: 1, ease: 'Sine.InOut' });
+    this.prepareFixedScreen(0x92e6ee);
   }
 
   private renderFocus(snapshot: GameSnapshot): void {

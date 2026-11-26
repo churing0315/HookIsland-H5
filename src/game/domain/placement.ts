@@ -1,5 +1,5 @@
 import { getAsset } from '../data/assetCatalog';
-import { getMapStageConfig, getTile, LANDMARKS, tileKey } from '../map/mapConfig';
+import { getMapStageConfig, getTile, tileKey } from '../map/mapConfig';
 import type { Footprint, MapStage, PlacedItem, TerrainType } from '../types';
 
 export type PlacementFailure = 'outside-map' | 'wrong-terrain' | 'overlap';
@@ -16,7 +16,6 @@ export interface PlacementRequest {
   gridY: number;
   stage: MapStage;
   items: PlacedItem[];
-  includeLandmarks?: boolean;
 }
 
 export function footprintCells(gridX: number, gridY: number, footprint: Footprint): Array<{ x: number; y: number }> {
@@ -27,24 +26,17 @@ export function footprintCells(gridX: number, gridY: number, footprint: Footprin
   return cells;
 }
 
-function occupiedCells(items: PlacedItem[], includeLandmarks: boolean): Set<string> {
+function occupiedCells(items: PlacedItem[]): Set<string> {
   const occupied = new Set<string>();
   for (const item of items) {
     const footprint = item.footprint ?? getAsset(item.assetId).footprint;
     for (const cell of footprintCells(item.gridX, item.gridY, footprint)) occupied.add(tileKey(cell.x, cell.y));
   }
-  if (includeLandmarks) {
-    for (const landmark of LANDMARKS) {
-      for (const cell of footprintCells(landmark.gridX, landmark.gridY, landmark.footprint)) {
-        occupied.add(tileKey(cell.x, cell.y));
-      }
-    }
-  }
   return occupied;
 }
 
 export function validatePlacement(request: PlacementRequest): PlacementResult {
-  return validateFootprint(request, occupiedCells(request.items, request.includeLandmarks !== false));
+  return validateFootprint(request, occupiedCells(request.items));
 }
 
 function validateFootprint(request: PlacementRequest, occupied: ReadonlySet<string>): PlacementResult {
@@ -75,7 +67,7 @@ export function findNearestValidPlacement(
   items: PlacedItem[],
 ): { x: number; y: number } | null {
   const bounds = getMapStageConfig(stage).bounds;
-  const occupied = occupiedCells(items, true);
+  const occupied = occupiedCells(items);
   const candidates: Array<{ x: number; y: number; distance: number }> = [];
   for (let y = bounds.minY; y <= bounds.maxY; y += 1) {
     for (let x = bounds.minX; x <= bounds.maxX; x += 1) {

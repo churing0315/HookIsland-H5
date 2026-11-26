@@ -36,6 +36,8 @@ describe('building rewards', () => {
     flow.openTaskSelect();
     flow.selectMinutes(minutes);
     expect(flow.confirmContract()).toBe(true);
+    expect(flow.getSnapshot().screen).toBe('ritual');
+    expect(flow.completeRitual()).toBe(true);
     vi.advanceTimersByTime(minutes * 60_000 + 3_000);
     const { selectedAssetId, screen } = flow.getSnapshot();
     expect(screen).toBe('build');
@@ -61,6 +63,7 @@ describe('building rewards', () => {
     flow.openTaskSelect();
     flow.selectMinutes(5);
     flow.confirmContract();
+    flow.completeRitual();
     vi.advanceTimersByTime(300_000);
     expect(flow.getSnapshot()).toMatchObject({ celebrationKind: 'medal', selectedAssetId: null });
     vi.advanceTimersByTime(3_000);

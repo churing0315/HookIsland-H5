@@ -19,15 +19,6 @@ export interface IslandMapStageConfig {
   bounds: { minX: number; minY: number; maxX: number; maxY: number };
 }
 
-export interface LandmarkDefinition {
-  id: string;
-  label: string;
-  textureKey: string;
-  gridX: number;
-  gridY: number;
-  footprint: Footprint;
-}
-
 export interface WorldBounds {
   x: number;
   y: number;
@@ -40,25 +31,6 @@ export interface WorldBounds {
   centerX: number;
   centerY: number;
 }
-
-export const LANDMARKS: LandmarkDefinition[] = [
-  {
-    id: 'landmark-warm-house',
-    label: '暖心小屋',
-    textureKey: 'placeholder-landmark-house',
-    gridX: 8,
-    gridY: 4,
-    footprint: { width: 2, height: 2 },
-  },
-  {
-    id: 'landmark-post-office',
-    label: '岛屿邮局',
-    textureKey: 'placeholder-landmark-post',
-    gridX: 12,
-    gridY: 6,
-    footprint: { width: 2, height: 2 },
-  },
-];
 
 export function tileKey(x: number, y: number): string {
   return `${x},${y}`;
