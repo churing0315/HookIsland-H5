@@ -9,6 +9,7 @@ export class IslandCameraController {
   private enabled = false;
   private interactionLocked = false;
   private stage: MapStage = 0;
+  private placementMode = false;
   private homeZoom = 1;
   private minZoom = 0.48;
   private readonly maxZoom = 1.6;
@@ -48,12 +49,13 @@ export class IslandCameraController {
     if (locked) this.resetGesture();
   }
 
-  fitStage(stage: MapStage, useDemoZoom = true): void {
+  fitStage(stage: MapStage, useDemoZoom = true, placementMode = this.placementMode): void {
     this.stage = stage;
+    this.placementMode = placementMode;
     const bounds = getMapWorldBounds(stage);
     const safeWidth = GAME_WIDTH - 176;
-    const safeHeight = GAME_HEIGHT - 70;
-    this.minZoom = stage === 2 ? 0.48 : 0.56;
+    const safeHeight = placementMode ? 203 : GAME_HEIGHT - 70;
+    this.minZoom = placementMode ? 0.25 : stage === 2 ? 0.48 : 0.56;
     this.homeZoom = Phaser.Math.Clamp(
       Math.min(safeWidth / bounds.width, safeHeight / bounds.height),
       this.minZoom,
@@ -61,7 +63,7 @@ export class IslandCameraController {
     );
     this.camera.removeBounds();
     this.camera.setZoom(useDemoZoom && DEMO_ZOOM ? DEMO_ZOOM : this.homeZoom);
-    this.camera.centerOn(bounds.centerX, bounds.centerY);
+    this.camera.centerOn(bounds.centerX, bounds.centerY + this.placementOffsetY());
     this.clampToBounds();
   }
 
@@ -157,7 +159,8 @@ export class IslandCameraController {
     const viewWidth = GAME_WIDTH / this.camera.zoom;
     const viewHeight = GAME_HEIGHT / this.camera.zoom;
     const currentCenterX = this.camera.scrollX + GAME_WIDTH / 2;
-    const currentCenterY = this.camera.scrollY + GAME_HEIGHT / 2;
+    const offsetY = this.placementOffsetY();
+    const currentCenterY = this.camera.scrollY + GAME_HEIGHT / 2 - offsetY;
     const centerX =
       viewWidth >= bounds.width
         ? bounds.centerX
@@ -166,7 +169,11 @@ export class IslandCameraController {
       viewHeight >= bounds.height
         ? bounds.centerY
         : Phaser.Math.Clamp(currentCenterY, bounds.top + viewHeight / 2, bounds.bottom - viewHeight / 2);
-    this.camera.centerOn(centerX, centerY);
+    this.camera.centerOn(centerX, centerY + offsetY);
+  }
+
+  private placementOffsetY(): number {
+    return this.placementMode ? (GAME_HEIGHT / 2 - 168) / this.camera.zoom : 0;
   }
 
   private resetGesture(): void {

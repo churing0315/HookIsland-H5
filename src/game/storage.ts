@@ -1,9 +1,10 @@
-import { DAILY_FOCUS_LIMIT, DAILY_PLANT_LIMIT, STORAGE_KEY } from './config';
+import { STORAGE_KEY } from './config';
 import { getAsset } from './data/assetCatalog';
+import { REWARD_BUILDINGS } from './data/rewardBuildings';
 import { findNearestValidPlacement } from './domain/placement';
 import { resolveStoredMapStage, unlockedTileSets } from './map/IslandExpansionService';
 import { getMapStageConfig, gridToWorldCenter } from './map/mapConfig';
-import type { PersistedGameData, PlacedItem } from './types';
+import type { PersistedGameData, PlacedItem, StoredBuilding } from './types';
 
 export interface StorageLike {
   getItem(key: string): string | null;
@@ -38,6 +39,7 @@ export function emptyData(now = new Date()): PersistedGameData {
       bonusMedalAwarded: false,
     },
     placedItems: [],
+    storedBuildings: [],
   };
 }
 
@@ -86,7 +88,7 @@ function normalizeItems(value: unknown): PlacedItem[] {
     normalized.push({
       id: raw.id,
       type: text(raw.type, asset.runtimeTextureKey),
-      assetId,
+      assetId: asset.id,
       gridX,
       gridY,
       footprint: asset.footprint,
@@ -97,6 +99,7 @@ function normalizeItems(value: unknown): PlacedItem[] {
       minutes: Math.max(0, finite(raw.minutes, 0)),
       createdAt: text(raw.createdAt, new Date(0).toISOString()),
       mapVersion: 2,
+      flipped: raw.flipped === true,
       legacyPosition: isRecord(raw.legacyPosition)
         ? {
             x: finite(raw.legacyPosition.x, finite(raw.x, center.x)),
@@ -115,14 +118,30 @@ export function normalizeGameData(value: unknown, now = new Date()): PersistedGa
   const daily = isRecord(value.daily) ? value.daily : {};
   const storedDay = daily.dayKey;
   const sameDay = storedDay === today;
-  const rawPlanted = sameDay ? Math.max(0, finite(daily.planted, 0)) : 0;
-  const planted = Math.min(DAILY_PLANT_LIMIT, rawPlanted);
-  const completed = sameDay
-    ? Math.min(DAILY_FOCUS_LIMIT, Math.max(planted, finite(daily.completed, rawPlanted)))
-    : 0;
-  const bonusMedalAwarded = sameDay
-    ? Boolean(daily.bonusMedalAwarded) || rawPlanted > DAILY_PLANT_LIMIT || completed >= DAILY_FOCUS_LIMIT
-    : false;
+  const planted = sameDay ? Math.max(0, finite(daily.planted, 0)) : 0;
+  const completed = sameDay ? Math.max(0, finite(daily.completed, planted)) : 0;
+  const bonusMedalAwarded = sameDay && daily.bonusMedalAwarded === true;
+  const storedBuildings: StoredBuilding[] = [];
+  const knownIds = new Set(items.map((item) => item.id));
+  if (Array.isArray(value.storedBuildings)) {
+    for (const raw of value.storedBuildings) {
+      if (!isRecord(raw) || typeof raw.id !== 'string' || knownIds.has(raw.id)) continue;
+      const reward = REWARD_BUILDINGS.find((building) => building.id === raw.assetId);
+      if (typeof raw.assetId !== 'string' || getAsset(raw.assetId).id !== raw.assetId) continue;
+      knownIds.add(raw.id);
+      storedBuildings.push({
+        id: raw.id,
+        assetId: raw.assetId,
+        taskId: text(raw.taskId, 'legacy'),
+        taskName: text(raw.taskName, '专注约定'),
+        minutes: reward?.minutes ?? Math.max(0, finite(raw.minutes, 0)),
+        createdAt: text(raw.createdAt, new Date(0).toISOString()),
+        flipped: raw.flipped === true,
+        previouslyPlaced: raw.previouslyPlaced === true,
+        unread: raw.unread === undefined ? raw.previouslyPlaced !== true : raw.unread === true,
+      });
+    }
+  }
   const totalPlaced = Math.max(items.length, finite(value.totalPlaced, items.length));
   const mapStage = resolveStoredMapStage(value.mapStage, totalPlaced);
 
@@ -135,6 +154,7 @@ export function normalizeGameData(value: unknown, now = new Date()): PersistedGa
     totalPlaced,
     daily: { dayKey: today, planted, completed, bonusMedalAwarded },
     placedItems: items,
+    storedBuildings,
   };
 }
 

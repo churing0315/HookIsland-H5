@@ -56,6 +56,8 @@ export interface IslandRenderOptions {
   roughAmp?: number;
   /** 整体透明度（建造预览等场景使用），默认 1 */
   alpha?: number;
+  /** 放置页使用固定屏幕海色，低缩放时海面图不会露出边缘 */
+  fixedSea?: boolean;
 }
 
 const DEFAULTS: Required<IslandRenderOptions> = {
@@ -64,6 +66,7 @@ const DEFAULTS: Required<IslandRenderOptions> = {
   sandWidth: 18,
   roughAmp: 1,
   alpha: 1,
+  fixedSea: false,
 };
 
 type Pt = [number, number]; // [格单位x, 格单位y]
@@ -409,7 +412,7 @@ export function renderIsland(
       ct.refresh();
     }
   }
-  const sea = scene.add.image(W / 2, H / 2, 'island-sea-gradient').setAlpha(alpha);
+  const sea = scene.add.image(W / 2, H / 2, 'island-sea-gradient').setAlpha(alpha).setVisible(!o.fixedSea);
   container.add(sea);
 
   // 1b. 底部虚化椭圆（feather）：#56dddf 径向渐变，叠加在海面底部增加层次感
@@ -429,7 +432,8 @@ export function renderIsland(
   }
   const feather = scene.add.image(W / 2, H, 'island-sea-feather')
     .setScale((W * 1.4) / EW, (H * 0.55) / EH)
-    .setAlpha(alpha);
+    .setAlpha(alpha)
+    .setVisible(!o.fixedSea);
   container.add(feather);
 
   // 1c. 海浪：开阔海面上的青色三角，缓慢浮动 + 呼吸（在海面之上、岛屿之下，不盖海岸）

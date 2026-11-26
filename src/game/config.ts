@@ -1,7 +1,7 @@
 export const GAME_WIDTH = 812;
 export const GAME_HEIGHT = 375;
 export const DAILY_PLANT_LIMIT = 3;
-export const DAILY_FOCUS_LIMIT = 4;
+export const DAILY_PLANT_LIMIT_ENABLED: boolean = false;
 export const STORAGE_KEY = 'lagou-island.prototype.v1';
 
 export const COLORS = {

@@ -10,6 +10,7 @@ const GLINT_POINTS = [0.5, 0, 1, GLINT_FLATTEN / 2, 0.5, GLINT_FLATTEN, 0, GLINT
 
 export class FocusEnvironmentController {
   private readonly layer: Phaser.GameObjects.Container;
+  private readonly waveLayer: Phaser.GameObjects.Container;
   private readonly tweens: Array<Phaser.Tweens.Tween | Phaser.Tweens.TweenChain> = [];
   private readonly timers: Phaser.Time.TimerEvent[] = [];
   private readonly reducedMotion: boolean;
@@ -21,8 +22,9 @@ export class FocusEnvironmentController {
     parent: Phaser.GameObjects.Container,
   ) {
     this.reducedMotion = shouldReduceFocusMotion();
+    this.waveLayer = scene.add.container(0, 0);
     this.layer = scene.add.container(0, 0);
-    parent.add(this.layer);
+    parent.add([this.waveLayer, this.layer]);
     this.createWaves();
     this.createFishSchools();
     this.createClouds();
@@ -39,6 +41,11 @@ export class FocusEnvironmentController {
     for (const timer of this.timers) timer.paused = paused;
   }
 
+  fadeForSettlement(duration: number): void {
+    this.setPaused(true);
+    this.scene.tweens.add({ targets: this.layer, alpha: 0, duration });
+  }
+
   destroy(): void {
     if (this.destroyed) return;
     this.destroyed = true;
@@ -47,6 +54,7 @@ export class FocusEnvironmentController {
     this.timers.length = 0;
     this.tweens.length = 0;
     this.layer.destroy(true);
+    this.waveLayer.destroy(true);
   }
 
   private rememberTween(config: Phaser.Types.Tweens.TweenBuilderConfig): void {
@@ -57,7 +65,7 @@ export class FocusEnvironmentController {
   private createWaves(): void {
     const left = this.scene.add.image(150, 139, FOCUS_TEXTURES.wave1).setScale(0.46, 0.52).setAlpha(0.34);
     const right = this.scene.add.image(664, 252, FOCUS_TEXTURES.wave2).setScale(0.54, 0.58).setAlpha(0.4);
-    this.layer.add([left, right]);
+    this.waveLayer.add([left, right]);
     this.rememberTween({
       targets: left,
       x: left.x + 8,

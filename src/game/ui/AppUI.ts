@@ -1,12 +1,16 @@
-import { DAILY_PLANT_LIMIT } from '../config';
 import { GameAudioManager } from '../audio/GameAudioManager';
-import { FOCUS_ASSET_ROOT, formatFocusTime } from '../focus/focusConfig';
+import { PLACEMENT_PREVIEW, type PlacementFeedback } from '../assets/placementDisplay';
+import { GAME_HEIGHT, GAME_WIDTH } from '../config';
+import { getAsset } from '../data/assetCatalog';
+import { REWARD_BUILDINGS } from '../data/rewardBuildings';
+import { FOCUS_ASSET_ROOT, FOCUS_RING, focusRemainingRatio, formatFocusTime, shouldReduceFocusMotion } from '../focus/focusConfig';
 import { effectiveMapStage } from '../map/IslandExpansionService';
-import { MAP_STAGES } from '../map/mapConfig';
+import type { BuildingEditControls } from '../map/IslandBuildingEditor';
 import type { GameFlow } from '../state/GameFlow';
 import { TaskSelectionExperience } from '../task/TaskSelectionExperience';
 import { PactRitualOverlay } from '../task/PactRitualOverlay';
 import type { GameSnapshot } from '../types';
+import { buildingIdAttribute, focusRewardMarkup } from './focusRewardMarkup';
 
 export class AppUI {
   private unsubscribe: (() => void) | null = null;
@@ -27,6 +31,8 @@ export class AppUI {
   mount(): void {
     this.audio.mount();
     this.root.addEventListener('click', this.handleClick);
+    window.addEventListener('hook-island-placement-status', this.handlePlacementStatus);
+    window.addEventListener('hook-island-edit-controls', this.handleBuildingEditControls);
     this.unsubscribe = this.flow.subscribe((snapshot) => {
       this.snapshot = snapshot;
       if (snapshot.screen === 'ritual' && this.taskExperience && this.renderedScreen === 'task-select') {
@@ -51,7 +57,39 @@ export class AppUI {
     this.taskExperience = null;
     this.stopFocusClock();
     this.root.removeEventListener('click', this.handleClick);
+    window.removeEventListener('hook-island-placement-status', this.handlePlacementStatus);
+    window.removeEventListener('hook-island-edit-controls', this.handleBuildingEditControls);
     this.audio.destroy();
+  }
+
+  private readonly handlePlacementStatus = (event: Event): void => {
+    this.updatePlacementStatus((event as CustomEvent<PlacementFeedback>).detail);
+  };
+
+  private readonly handleBuildingEditControls = (event: Event): void => {
+    const controls = (event as CustomEvent<BuildingEditControls | null>).detail;
+    const toolbar = this.root.querySelector<HTMLElement>('.island-edit-tools');
+    if (!toolbar) return;
+    toolbar.hidden = controls === null;
+    if (!controls) return;
+    toolbar.style.left = `${100 * controls.x / GAME_WIDTH}%`;
+    toolbar.style.top = `${100 * controls.y / GAME_HEIGHT}%`;
+    toolbar.querySelector('[data-edit="flip"]')?.setAttribute('aria-pressed', String(controls.flipped));
+    const confirm = toolbar.querySelector<HTMLButtonElement>('[data-edit="confirm"]');
+    if (confirm) confirm.disabled = !controls.valid;
+  };
+
+  private updatePlacementStatus({ message, position }: PlacementFeedback): void {
+    const status = this.root.querySelector('.placement-status');
+    const preview = this.root.querySelector<HTMLImageElement>('.placement-preview');
+    if (!status || !preview || !this.snapshot.selectedAssetId) return;
+    const text = message ?? `拖动${getAsset(this.snapshot.selectedAssetId).name}到喜欢的地方吧！`;
+    if (status.textContent !== text) status.textContent = text;
+    preview.hidden = !position;
+    if (position) {
+      preview.style.left = `${100 * position.x / GAME_WIDTH}%`;
+      preview.style.top = `${100 * position.y / GAME_HEIGHT}%`;
+    }
   }
 
   private readonly handleClick = (event: MouseEvent): void => {
@@ -61,6 +99,17 @@ export class AppUI {
     const action = target.dataset.action;
     if (action === 'open-task') this.flow.openTaskSelect();
     if (action === 'back-island') this.flow.returnToIsland();
+    if (action === 'pack-up-building') this.flow.returnToIsland();
+    if (action === 'edit-building') window.dispatchEvent(new CustomEvent('hook-island-edit-action', { detail: target.dataset.edit }));
+    if (action === 'open-building-storage' || action?.startsWith('camera-')) {
+      window.dispatchEvent(new CustomEvent('hook-island-edit-action', { detail: 'cancel' }));
+    }
+    if (action === 'open-building-storage') {
+      this.flow.markBuildingStorageRead();
+      this.root.querySelector<HTMLDialogElement>('.building-storage')?.showModal();
+    }
+    if (action === 'close-building-storage') this.root.querySelector<HTMLDialogElement>('.building-storage')?.close();
+    if (action === 'place-building' && target.dataset.buildingId) this.flow.placeStoredBuilding(target.dataset.buildingId);
     if (action === 'begin-ritual') this.flow.beginRitual();
     if (action === 'toggle-pause') this.flow.togglePause();
     if (action === 'request-focus-end') this.showFocusEndDialog(true);
@@ -98,17 +147,38 @@ export class AppUI {
         this.startFocusClock();
         break;
       case 'celebration':
-        this.root.innerHTML = `${fastChip}${
-          this.snapshot.celebrationKind === 'medal'
-            ? '<section class="center-copy celebration-copy medal-copy" aria-live="polite"><p>今天的特别约定</p><h1>专注勋章已点亮！</h1><span>第 4 次完成不增加建造次数</span></section>'
-            : '<section class="center-copy celebration-copy" aria-live="polite"><p>约定完成</p><h1>你做到了！</h1><span>一次建造机会正在等你</span></section>'
-        }`;
+        if (this.snapshot.selectedBuildingId && this.snapshot.selectedAssetId) {
+          const { selectedBuildingId, selectedAssetId } = this.snapshot;
+          this.root.innerHTML = `
+            ${this.focusRingsMarkup(0, true)}
+            <output class="focus-time focus-time-ending" aria-hidden="true">00:00</output>
+            ${focusRewardMarkup(selectedBuildingId, selectedAssetId, this.flow.placementProblem(selectedAssetId))}
+            ${this.backButton('back-island')}`;
+          const success = this.root.querySelector<HTMLElement>('.reward-success');
+          if (success) {
+            success.onanimationstart = (event) => {
+              if (event.target !== success) return;
+              success.onanimationstart = null;
+              this.audio.playFocusSuccess();
+            };
+          }
+        }
         break;
-      case 'build':
-        this.root.innerHTML = this.snapshot.selectedAssetId
-          ? `${fastChip}<header class="topbar build-topbar"><div><span class="eyebrow">一次约定 · 一次建造</span><h1>选择合法方格放置</h1></div></header>${this.cameraControlsMarkup()}`
-          : '<section class="center-copy" aria-live="polite"><h1>这个等级的建筑暂时放不下</h1><span>这次未占用建造次数</span><button data-action="back-island">返回小岛</button></section>';
+      case 'build': {
+        const building = REWARD_BUILDINGS.find(({ id }) => id === this.snapshot.selectedAssetId);
+        const stored = this.snapshot.data.storedBuildings.find(({ id }) => id === this.snapshot.selectedBuildingId);
+        this.root.innerHTML = `<section class="placement-ui" aria-label="建筑放置">
+          <div class="placement-card" aria-hidden="true"></div>
+          <p class="placement-status" role="status"></p>
+          ${stored ? `<img class="placement-preview${stored.flipped ? ' is-flipped' : ''}" src="${building?.url ?? '/assets/building-rewards/tier2_common_building/leafy_tree.png'}" alt="" draggable="false"
+            style="width:${100 * PLACEMENT_PREVIEW.width / GAME_WIDTH}%;height:${100 * PLACEMENT_PREVIEW.height / GAME_HEIGHT}%">` : ''}
+          <button class="placement-pack-up" type="button" data-action="pack-up-building" aria-label="收起建筑">
+            <span>收起</span><img src="/assets/placement/placement_icon_packup.png" alt="">
+          </button>
+        </section>`;
+        this.updatePlacementStatus({ message: null, position: PLACEMENT_PREVIEW });
         break;
+      }
     }
   }
 
@@ -121,11 +191,8 @@ export class AppUI {
   }
 
   private islandMarkup(): string {
-    const planted = this.snapshot.data.daily.planted;
     const stage = effectiveMapStage(this.snapshot.data.mapStage);
-    const stageName = MAP_STAGES[stage].name;
-    const medalPending = planted >= DAILY_PLANT_LIMIT && !this.snapshot.data.daily.bonusMedalAwarded;
-    const full = planted >= DAILY_PLANT_LIMIT && this.snapshot.data.daily.bonusMedalAwarded;
+    const unread = this.snapshot.data.storedBuildings.some((building) => building.unread);
     return `
       <button class="island-back" data-action="camera-reset" aria-label="镜头归位">
         <img src="/assets/v2/btn-back.png" alt="">
@@ -135,28 +202,49 @@ export class AppUI {
         <img class="mascot-image" src="/assets/v2/mascot-xiaobanlong.png" alt="小伴龙">
       </div>
       <section class="island-info" aria-label="岛屿信息">
-        <div class="island-info-avatar"><div class="island-info-thumb">${stage + 1}</div></div>
+        <div class="island-info-avatar" aria-hidden="true"><div class="island-info-thumb"></div></div>
         <div class="island-info-card">
           <strong>乐乐的小岛</strong>
-          <span>${stageName} · 累计 ${this.snapshot.data.totalPlaced}</span>
-          <span>今日建造 ${planted}/${DAILY_PLANT_LIMIT}</span>
+          <span class="island-info-total"><img src="/assets/home/home_user_number_icon.png" alt="">建造：${this.snapshot.data.totalPlaced}</span>
         </div>
       </section>
       ${this.snapshot.fastMode ? `<div class="stage-preview-chip">演示 · 地图阶段 ${stage}</div>` : ''}
       ${this.cameraControlsMarkup()}
-      <button class="pinky-button" data-action="open-task" ${full ? 'aria-disabled="true"' : ''} aria-label="${
-        full ? '今天已经完成' : '和小伴龙拉钩'
-      }">
-        <img src="/assets/v2/btn-pinky.png" alt="${full ? '今天已经完成啦' : '和小伴龙拉钩'}">
+      <button class="pinky-button" data-action="open-task" aria-label="和小伴龙拉钩">
+        <img src="/assets/v2/btn-pinky.png" alt="">
       </button>
-      ${
-        medalPending
-          ? '<div class="gentle-notice">再完成第 4 次约定，可点亮今日独立勋章；不会增加建造次数。</div>'
-          : full
-            ? '<div class="gentle-notice">今天 3 次建造与特别勋章都完成啦，明天再来。</div>'
-            : ''
-      }
+      <button class="building-storage-toggle" data-action="open-building-storage" aria-label="${unread ? '建筑收纳，有新建筑' : '建筑收纳'}">
+        <img src="/assets/home/home_edit_store.png" alt="">
+        ${unread ? '<span class="building-storage-unread" aria-hidden="true"></span>' : ''}
+      </button>
+      <div class="island-edit-tools" role="group" aria-label="编辑建筑" hidden>
+        <button data-action="edit-building" data-edit="store" aria-label="收进收纳箱"><img src="/assets/home/home_edit_btn_bin.png" alt=""></button>
+        <button data-action="edit-building" data-edit="flip" aria-label="水平翻转" aria-pressed="false"><img src="/assets/home/home_edit_btn_filp.png" alt=""></button>
+        <button data-action="edit-building" data-edit="confirm" aria-label="确认编辑"><img src="/assets/home/home_edit_btn_ok.png" alt=""></button>
+      </div>
+      ${this.storageMarkup()}
     `;
+  }
+
+  private backButton(action: 'request-focus-end' | 'back-island'): string {
+    return `<button class="focus-message-visual game-back-button" type="button" data-action="${action}" aria-label="返回小岛">
+      <img src="/assets/v2/btn-back.png" alt="">
+    </button>`;
+  }
+
+  private storageMarkup(): string {
+    const items = this.snapshot.data.storedBuildings.map(({ id, assetId, flipped, previouslyPlaced }) => {
+      const building = getAsset(assetId);
+      const reward = REWARD_BUILDINGS.find((entry) => entry.id === assetId);
+      const problem = this.flow.placementProblem(assetId, previouslyPlaced);
+      return `<li><img src="${reward?.url ?? '/assets/building-rewards/tier2_common_building/leafy_tree.png'}" ${flipped ? 'class="is-flipped"' : ''} alt=""><strong>${building.name}</strong>
+        <button type="button" data-action="place-building" data-building-id="${buildingIdAttribute(id)}"${problem ? ' disabled' : ''}
+          aria-label="放置${building.name}">去放置</button>${problem ? `<small>${problem}</small>` : ''}</li>`;
+    }).join('');
+    return `<dialog class="building-storage" aria-labelledby="building-storage-title">
+      <header><h2 id="building-storage-title">建筑收纳</h2><button data-action="close-building-storage">关闭</button></header>
+      ${items ? `<ul>${items}</ul>` : '<p>暂无待放置的建筑</p>'}
+    </dialog>`;
   }
 
   private cameraControlsMarkup(): string {
@@ -174,10 +262,9 @@ export class AppUI {
     if (!focus) return '';
     return `
       <section class="focus-ui" aria-label="专注计时">
+        ${this.focusRingsMarkup(focusRemainingRatio(focus.remainingMs, focus.totalMs))}
         ${this.snapshot.fastMode ? '<div class="focus-demo-chip">演示加速</div>' : ''}
-        <div class="focus-message-visual" aria-hidden="true">
-          <img src="/assets/v2/btn-back.png" alt="">
-        </div>
+        ${this.backButton('request-focus-end')}
         <div class="focus-controls">
           <div class="focus-task-label">${focus.taskName} · ${focus.minutes} 分钟</div>
           <div class="focus-control-buttons">
@@ -214,15 +301,50 @@ export class AppUI {
     `;
   }
 
+  private focusRingsMarkup(remaining: number, ending = false): string {
+    const whiteDiameter = (FOCUS_RING.innerRadius + 2) * 2 + FOCUS_RING.whiteStrokeWidth;
+    const dialDiameter = FOCUS_RING.outerRadius * 2 + FOCUS_RING.ringWidth;
+    const classes = ending ? ` is-ending${shouldReduceFocusMotion() ? ' is-reduced-motion' : ''}` : '';
+    return `<div class="focus-ring-layer${classes}" aria-hidden="true" style="
+        --focus-center-x:${100 * FOCUS_RING.centerX / GAME_WIDTH}%;
+        --focus-center-y:${100 * FOCUS_RING.centerY / GAME_HEIGHT}%">
+      <div class="focus-dial${remaining > 0.001 ? '' : ' is-empty'}" style="
+        width:${100 * dialDiameter / GAME_WIDTH}%;
+        height:${100 * dialDiameter / GAME_HEIGHT}%;
+        --focus-ring-width:${100 * FOCUS_RING.ringWidth / dialDiameter}%;
+        --focus-track-color:#${FOCUS_RING.trackColor.toString(16)};
+        --focus-progress-color:#${FOCUS_RING.remainingColor.toString(16)};
+        --focus-direction:${FOCUS_RING.clockwise ? 1 : -1};
+        --focus-progress:${remaining}turn">
+        <div class="focus-dial-band"></div>
+        <span class="focus-dial-cap"></span>
+        <span class="focus-dial-tip"><span class="focus-dial-cap"></span></span>
+      </div>
+      <div class="focus-white-ring" style="
+        width:${100 * whiteDiameter / GAME_WIDTH}%;
+        height:${100 * whiteDiameter / GAME_HEIGHT}%;
+        border-width:${100 * FOCUS_RING.whiteStrokeWidth / GAME_WIDTH}cqw"></div>
+    </div>`;
+  }
+
   private startFocusClock(): void {
+    const output = this.root.querySelector<HTMLOutputElement>('.focus-time');
+    const dial = this.root.querySelector<HTMLElement>('.focus-dial');
+    let previousRemaining = -1;
     const update = (): void => {
       const snapshot = this.flow.getSnapshot();
       if (snapshot.screen !== 'focus' || !snapshot.focus) {
         this.focusClockFrame = null;
         return;
       }
-      const output = this.root.querySelector<HTMLOutputElement>('.focus-time');
-      if (output) output.value = formatFocusTime(snapshot.focus.remainingMs);
+      const { remainingMs, totalMs } = snapshot.focus;
+      if (remainingMs !== previousRemaining) {
+        previousRemaining = remainingMs;
+        if (output) output.value = formatFocusTime(remainingMs);
+        const remaining = focusRemainingRatio(remainingMs, totalMs);
+        dial?.style.setProperty('--focus-progress', `${remaining}turn`);
+        dial?.classList.toggle('is-empty', remaining <= 0.001);
+      }
       this.focusClockFrame = window.requestAnimationFrame(update);
     };
     update();

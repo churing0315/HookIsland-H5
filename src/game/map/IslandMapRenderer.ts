@@ -5,6 +5,11 @@ import type { MapStage, PlacedItem, TerrainType } from '../types';
 import { getMapStageConfig, gridToWorldCenter, MAP_COLUMNS, MAP_ROWS, TILE_SIZE } from './mapConfig';
 import { renderIsland, TileType } from './islandRenderer';
 
+export interface IslandBuildingSprite {
+  item: PlacedItem;
+  image: Phaser.GameObjects.Image;
+}
+
 /** 项目地形 → 演示渲染器地块类型的映射 */
 const TERRAIN_TO_TILE: Record<TerrainType, number> = {
   grass: TileType.LAND,
@@ -29,37 +34,28 @@ export class IslandMapRenderer {
     private readonly container: Phaser.GameObjects.Container,
   ) {}
 
-  render(stage: MapStage, items: PlacedItem[], showPlacementGrid: boolean, alpha = 1): void {
-    const config = getMapStageConfig(stage);
-
+  render(stage: MapStage, items: PlacedItem[], alpha = 1, fixedSea = false): IslandBuildingSprite[] {
     // 岛屿地块：轮廓海岸 + 圆角裁剪棋盘地形（替代原先的逐格圆角矩形拼贴）
     renderIsland(this.scene, this.container, stageToGrid(stage), MAP_COLUMNS, MAP_ROWS, {
       cellSize: TILE_SIZE,
       alpha,
+      fixedSea,
     });
 
-    // 放置参考网格（建造模式可见）
-    if (showPlacementGrid) {
-      const gridLines = this.scene.add.graphics().setAlpha(alpha);
-      gridLines.lineStyle(1.2, 0xffffff, 0.44);
-      for (const tile of config.tiles) {
-        gridLines.strokeRect(tile.x * TILE_SIZE + 2, tile.y * TILE_SIZE + 2, TILE_SIZE - 4, TILE_SIZE - 4);
-      }
-      this.container.add(gridLines);
-    }
-
-    [...items]
+    return [...items]
       .sort((a, b) => a.y - b.y)
-      .forEach((item) => {
+      .map((item) => {
         const asset = getAsset(item.assetId);
         const center = gridToWorldCenter(item.gridX, item.gridY, asset.footprint);
         const image = this.scene.add
           .image(center.x, center.y, asset.runtimeTextureKey)
           .setAlpha(alpha)
+          .setFlipX(item.flipped === true)
           .setDepth(center.y + 2);
         image.setScale(placedAssetScale(asset, image.width, image.height));
         image.setData('placedItemId', item.id);
         this.container.add(image);
+        return { item, image };
       });
   }
 }

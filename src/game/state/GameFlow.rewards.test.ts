@@ -38,23 +38,29 @@ describe('building rewards', () => {
     expect(flow.confirmContract()).toBe(true);
     expect(flow.getSnapshot().screen).toBe('ritual');
     expect(flow.completeRitual()).toBe(true);
-    vi.advanceTimersByTime(minutes * 60_000 + 3_000);
-    const { selectedAssetId, screen } = flow.getSnapshot();
-    expect(screen).toBe('build');
+    vi.advanceTimersByTime(minutes * 60_000);
+    const { selectedAssetId, selectedBuildingId, screen } = flow.getSnapshot();
+    expect(screen).toBe('celebration');
     expect(REWARD_BUILDINGS.find((reward) => reward.id === selectedAssetId)?.tier).toBe(tier);
+    expect(flow.placeStoredBuilding(selectedBuildingId!)).toBe(true);
+    expect(flow.getSnapshot().screen).toBe('build');
+    flow.returnToIsland();
+    expect(flow.getSnapshot().data.storedBuildings).toEqual([expect.objectContaining({ id: selectedBuildingId })]);
+    expect(flow.placeStoredBuilding(selectedBuildingId!)).toBe(true);
     const id = selectedAssetId!;
     const position = findNearestValidPlacement(id, 6, 4, 0, [])!;
     flow.commitPlacement(id, 0, 0);
     flow.commitPlacement('tree_round', position.x, position.y);
     expect(flow.getSnapshot().data.placedItems).toHaveLength(0);
     flow.commitPlacement(id, position.x, position.y);
+    expect(flow.getSnapshot().data.storedBuildings).toEqual([]);
     expect(new GameFlow().getSnapshot().data.placedItems).toEqual([
       expect.objectContaining({ assetId: id, minutes, gridX: position.x, gridY: position.y }),
     ]);
     flow.destroy();
   });
 
-  it('keeps the fourth completion medal-only', () => {
+  it('saves the fourth reward before leaving settlement and places it after reloading', () => {
     const data = emptyData();
     data.daily.planted = 3;
     data.daily.completed = 3;
@@ -65,14 +71,50 @@ describe('building rewards', () => {
     flow.confirmContract();
     flow.completeRitual();
     vi.advanceTimersByTime(300_000);
-    expect(flow.getSnapshot()).toMatchObject({ celebrationKind: 'medal', selectedAssetId: null });
-    vi.advanceTimersByTime(3_000);
-    expect(flow.getSnapshot()).toMatchObject({ screen: 'island', data: { daily: { planted: 3, bonusMedalAwarded: true } } });
+    expect(flow.getSnapshot()).toMatchObject({ screen: 'celebration', data: { daily: { planted: 3, completed: 4 } } });
+    flow.returnToIsland();
+    const reloaded = new GameFlow();
+    const [building] = reloaded.getSnapshot().data.storedBuildings;
+    expect(reloaded.placeStoredBuilding(building.id)).toBe(true);
+    const position = findNearestValidPlacement(building.assetId, 6, 4, 0, [])!;
+    reloaded.commitPlacement(building.assetId, position.x, position.y);
+    expect(reloaded.getSnapshot().data.daily.planted).toBe(4);
+    expect(reloaded.getSnapshot().data.storedBuildings).toEqual([]);
+    reloaded.destroy();
     flow.destroy();
   });
 
-  it('does not fall back to a different tier on a crowded island', () => {
-    const occupied = { gridX: 6, gridY: 3, footprint: { width: 10, height: 8 } };
-    expect(drawBuildingReward(20, 0, [occupied as Parameters<typeof drawBuildingReward>[2][number]])).toBeNull();
+  it('guarantees a reward of the right tier even without space to place it', () => {
+    const data = emptyData();
+    data.placedItems.push({ id: 'blocker', assetId: 'tree_round', gridX: 6, gridY: 3, footprint: { width: 10, height: 8 } } as typeof data.placedItems[number]);
+    const id = drawBuildingReward(20, 0, data.placedItems);
+    expect(REWARD_BUILDINGS.find((reward) => reward.id === id)?.tier).toBe(4);
+    expect(findNearestValidPlacement(id, 6, 4, 0, data.placedItems)).toBeNull();
+  });
+
+  it('persists unread state, edits an existing building and re-places it without counting twice', () => {
+    const flow = new GameFlow();
+    flow.openTaskSelect();
+    flow.selectMinutes(5);
+    flow.confirmContract();
+    flow.completeRitual();
+    vi.advanceTimersByTime(300_000);
+    flow.returnToIsland();
+    const [reward] = flow.getSnapshot().data.storedBuildings;
+    expect(reward.unread).toBe(true);
+    flow.markBuildingStorageRead();
+    expect(new GameFlow().getSnapshot().data.storedBuildings[0].unread).toBe(false);
+    expect(flow.placeStoredBuilding(reward.id)).toBe(true);
+    flow.commitPlacement(reward.assetId, 8, 5);
+    expect(flow.editPlacedBuilding(reward.id, 0, 0, true)).toBe(false);
+    expect(flow.editPlacedBuilding(reward.id, 10, 5, true)).toBe(true);
+    expect(new GameFlow().getSnapshot().data.placedItems).toMatchObject([{ id: reward.id, gridX: 10, gridY: 5, flipped: true }]);
+    flow.storePlacedBuilding(reward.id, true);
+    expect(flow.getSnapshot().data.placedItems).toHaveLength(0);
+    expect(flow.getSnapshot().data.storedBuildings[0]).toMatchObject({ id: reward.id, flipped: true, previouslyPlaced: true, unread: false });
+    expect(flow.placeStoredBuilding(reward.id)).toBe(true);
+    flow.commitPlacement(reward.assetId, 11, 5);
+    expect(flow.getSnapshot().data).toMatchObject({ totalPlaced: 1, daily: { planted: 1 }, storedBuildings: [], placedItems: [{ id: reward.id, flipped: true }] });
+    flow.destroy();
   });
 });

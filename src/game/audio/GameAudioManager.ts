@@ -22,11 +22,16 @@ export class GameAudioManager {
   setScreen(screen: Screen): void {
     if (screen === this.screen) return;
     this.screen = screen;
+    if (screen === 'focus') this.getEffect('focusSuccess');
     this.syncBgm();
   }
 
   playConfirm(): void {
     this.playEffect('confirm');
+  }
+
+  playFocusSuccess(): void {
+    this.playEffect('focusSuccess');
   }
 
   destroy(): void {
@@ -74,20 +79,20 @@ export class GameAudioManager {
   }
 
   private playEffect(effect: AudioEffect): void {
-    const source = effect === 'click'
-      ? AUDIO_ASSETS.click
-      : effect === 'confirm'
-        ? AUDIO_ASSETS.confirm
-        : AUDIO_ASSETS.unavailable;
-    let audio = this.effects.get(effect);
-    if (!audio) {
-      audio = new Audio(source);
-      audio.preload = 'auto';
-      this.effects.set(effect, audio);
-    }
+    const audio = this.getEffect(effect);
     audio.pause();
     audio.currentTime = 0;
     void audio.play().catch(() => undefined);
+  }
+
+  private getEffect(effect: AudioEffect): HTMLAudioElement {
+    let audio = this.effects.get(effect);
+    if (!audio) {
+      audio = new Audio(AUDIO_ASSETS[effect]);
+      audio.preload = 'auto';
+      this.effects.set(effect, audio);
+    }
+    return audio;
   }
 
   private syncBgm(): void {

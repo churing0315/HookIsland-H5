@@ -38,8 +38,14 @@ export interface PlacedItem {
   minutes: number;
   createdAt: string;
   mapVersion: 2;
+  flipped?: boolean;
   legacyPosition?: { x: number; y: number };
 }
+
+export type StoredBuilding = Pick<PlacedItem, 'id' | 'assetId' | 'taskId' | 'taskName' | 'minutes' | 'createdAt' | 'flipped'> & {
+  previouslyPlaced?: boolean;
+  unread?: boolean;
+};
 
 export interface PersistedGameData {
   version: 2;
@@ -55,6 +61,7 @@ export interface PersistedGameData {
     bonusMedalAwarded: boolean;
   };
   placedItems: PlacedItem[];
+  storedBuildings: StoredBuilding[];
 }
 
 export interface GameSnapshot {
@@ -65,5 +72,5 @@ export interface GameSnapshot {
   data: PersistedGameData;
   fastMode: boolean;
   selectedAssetId: string | null;
-  celebrationKind: 'build' | 'medal';
+  selectedBuildingId: string | null;
 }

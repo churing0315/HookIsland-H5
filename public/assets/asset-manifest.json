@@ -73,9 +73,9 @@
       "id": "global.audio",
       "sourcePath": "assets-source/audio/",
       "runtimePath": "/assets/audio/",
-      "files": ["click.wav", "birds-morning.wav", "confirmbtn.wav", "unableclick.wav", "homepinky.wav"],
+      "files": ["click.wav", "birds-morning.wav", "confirmbtn.wav", "unableclick.wav", "homepinky.wav", "right-NZB.mp3"],
       "replaceable": true,
-      "note": "全局点击、岛屿 BGM、确认完成与不可点击音效；homepinky.wav 本轮仅保留，未指定触发点"
+      "note": "全局点击、岛屿 BGM、确认完成与不可点击音效；right-NZB.mp3 随专注完成动画播放；homepinky.wav 预留"
     },
     {
       "id": "focus-v2.ui-and-characters",
@@ -120,6 +120,27 @@
       ],
       "replaceable": false,
       "note": "拉钩确认后的全屏仪式动画；所有内部元素由 pact_hand_mask 裁切，不播放音效"
+    },
+    {
+      "id": "reward-v2.ui",
+      "sourcePath": "assets-source/reward-v2/",
+      "runtimePath": "/assets/reward-v2/",
+      "files": ["timecount_img_success.png", "reward_shape.png", "reward_popup_pannel.png", "reward_popup_xbl.png", "reward_popup_btn.png", "reward_popup_btn_mask.png", "reward_popup_btn_font.png"],
+      "replaceable": false,
+      "note": "专注归零和领取建筑奖励的正式切图，奖励建筑图从时长对应的资源池读取"
+    },
+    {
+      "id": "placement.pack-up",
+      "sourcePath": "assets-source/placement/placement_icon_packup.png",
+      "runtimePath": "/assets/placement/placement_icon_packup.png",
+      "replaceable": false
+    },
+    {
+      "id": "home.edit-ui",
+      "sourcePath": "assets-source/home/",
+      "runtimePath": "/assets/home/",
+      "files": ["home_edit_store.png", "home_edit_btn_bin.png", "home_edit_btn_filp.png", "home_edit_btn_ok.png", "home_user_number_icon.png"],
+      "replaceable": false
     },
     {
       "id": "catalog.v2.36-items",

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-import { fitAssetImage, placedAssetScale } from '../assets/placementDisplay';
-import { createPlaceholderTextures, PLACEHOLDER_KEYS } from '../assets/placeholders';
+import { fitAssetImage, placedAssetScale, PLACEMENT_PREVIEW, type PlacementFeedback } from '../assets/placementDisplay';
+import { createPlaceholderTextures } from '../assets/placeholders';
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { getAsset } from '../data/assetCatalog';
 import { REWARD_BUILDINGS } from '../data/rewardBuildings';
@@ -10,20 +10,19 @@ import {
   FOCUS_RING,
   FOCUS_TEXTURE_PATHS,
   FOCUS_TEXTURES,
-  focusRemainingRatio,
   resolveFocusTexture,
   shouldReduceFocusMotion,
 } from '../focus/focusConfig';
 import { IslandCameraController } from '../map/IslandCameraController';
+import { IslandBuildingEditor } from '../map/IslandBuildingEditor';
 import { effectiveMapStage } from '../map/IslandExpansionService';
 import { IslandMapRenderer } from '../map/IslandMapRenderer';
-import { gridToWorldCenter, worldToGrid } from '../map/mapConfig';
+import { gridToWorldCenter, TILE_SIZE, worldToGrid } from '../map/mapConfig';
 import type { GameFlow } from '../state/GameFlow';
 import type { GameSnapshot, MapStage, PlacedItem } from '../types';
 
 export class PrototypeScene extends Phaser.Scene {
   private static readonly FOCUS_INNER_TEXTURE = 'focus-inner-gradient';
-  private static readonly FOCUS_DIAL_TEXTURE = 'focus-dial-hires';
   private flow!: GameFlow;
   private unsubscribe: (() => void) | null = null;
   private worldLayer!: Phaser.GameObjects.Container;
@@ -32,8 +31,11 @@ export class PrototypeScene extends Phaser.Scene {
   private cameraController!: IslandCameraController;
   private mapRenderer!: IslandMapRenderer;
   private renderedScreen: GameSnapshot['screen'] | null = null;
-  private dialTexture: Phaser.Textures.CanvasTexture | null = null;
   private focusEnvironment: FocusEnvironmentController | null = null;
+  private focusContents: Phaser.GameObjects.Container | null = null;
+  private focusMascot: Phaser.GameObjects.Image | null = null;
+  private buildingEditor: IslandBuildingEditor | null = null;
+  private renderedBuildings: PlacedItem[] | null = null;
 
   constructor() {
     super('prototype');
@@ -57,35 +59,45 @@ export class PrototypeScene extends Phaser.Scene {
     this.cameraController = new IslandCameraController(this, this.cameras.main);
 
     this.unsubscribe = this.flow.subscribe((snapshot) => {
-      if (snapshot.screen !== this.renderedScreen) this.render(snapshot);
+      if (snapshot.screen !== this.renderedScreen || (snapshot.screen === 'island' && snapshot.data.placedItems !== this.renderedBuildings)) {
+        this.render(snapshot);
+      }
       if (snapshot.screen === 'focus') this.focusEnvironment?.setPaused(snapshot.focus?.paused ?? false);
     });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.unsubscribe?.();
+      this.buildingEditor?.destroy();
       this.cameraController.destroy();
     });
   }
 
-  update(): void {
-    if (this.flow.getSnapshot().screen === 'focus' && this.dialTexture) {
-      const focus = this.flow.getSnapshot().focus;
-      if (focus) this.drawFocusDial(focusRemainingRatio(focus.remainingMs, focus.totalMs));
-    }
-  }
-
   private render(snapshot: GameSnapshot): void {
+    const wasFocusing = this.renderedScreen === 'focus';
+    const camera = this.cameras.main;
+    const islandView = snapshot.screen === 'island' && this.renderedScreen === 'island'
+      ? { zoom: camera.zoom, x: camera.scrollX, y: camera.scrollY }
+      : null;
     this.renderedScreen = snapshot.screen;
+    if (wasFocusing && snapshot.screen === 'celebration') {
+      this.finishFocus();
+      return;
+    }
+    this.buildingEditor?.destroy();
+    this.buildingEditor = null;
     this.focusEnvironment?.destroy();
     this.focusEnvironment = null;
     this.tweens.killAll();
     this.worldLayer.removeAll(true);
     this.hudLayer.removeAll(true);
-    this.dialTexture = null;
+    this.focusContents = null;
+    this.focusMascot = null;
     this.cameraController.setInteractionLocked(false);
 
     switch (snapshot.screen) {
       case 'island':
+        this.renderedBuildings = snapshot.data.placedItems;
         this.renderIsland(snapshot.data.placedItems, effectiveMapStage(snapshot.data.mapStage));
+        if (islandView) camera.setZoom(islandView.zoom).setScroll(islandView.x, islandView.y);
         break;
       case 'task-select':
         this.prepareFixedScreen(0x92e6ee);
@@ -97,19 +109,21 @@ export class PrototypeScene extends Phaser.Scene {
         this.renderFocus(snapshot);
         break;
       case 'celebration':
-        this.renderCelebration(snapshot.celebrationKind);
+        this.prepareFixedScreen(0x21ade8);
         break;
       case 'build':
-        this.renderBuild(snapshot.data.placedItems, effectiveMapStage(snapshot.data.mapStage), snapshot.selectedAssetId);
+        this.renderBuild(snapshot.data.placedItems, effectiveMapStage(snapshot.data.mapStage), snapshot.selectedAssetId,
+          snapshot.data.storedBuildings.find(({ id }) => id === snapshot.selectedBuildingId)?.flipped === true);
         break;
     }
   }
 
-  private prepareMap(stage: MapStage, items: PlacedItem[], showGrid: boolean, alpha = 1): void {
-    this.cameras.main.setBackgroundColor(COLORS.water);
+  private prepareMap(stage: MapStage, items: PlacedItem[], alpha = 1, placementMode = false) {
+    this.cameras.main.setBackgroundColor(placementMode ? 0x60cee9 : COLORS.water);
     this.cameraController.setEnabled(true);
-    this.mapRenderer.render(stage, items, showGrid, alpha);
-    this.cameraController.fitStage(stage);
+    const sprites = this.mapRenderer.render(stage, items, alpha, placementMode);
+    this.cameraController.fitStage(stage, !placementMode, placementMode);
+    return sprites;
   }
 
   private prepareFixedScreen(color: number): void {
@@ -120,7 +134,8 @@ export class PrototypeScene extends Phaser.Scene {
   }
 
   private renderIsland(items: PlacedItem[], stage: MapStage, alpha = 1): void {
-    this.prepareMap(stage, items, false, alpha);
+    const sprites = this.prepareMap(stage, items, alpha);
+    this.buildingEditor = new IslandBuildingEditor(this, this.cameraController, this.flow, sprites);
   }
 
   private renderRitual(): void {
@@ -137,29 +152,26 @@ export class PrototypeScene extends Phaser.Scene {
     background.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
     this.hudLayer.add(background);
     this.focusEnvironment = new FocusEnvironmentController(this, this.hudLayer);
+    const centerY = GAME_HEIGHT / 2;
+    const contents = this.add.container(-FOCUS_RING.centerX, -centerY);
+    this.focusContents = this.add.container(FOCUS_RING.centerX, centerY, [contents]);
+    this.hudLayer.add(this.focusContents);
 
     const innerCircle = this.add.image(
       FOCUS_RING.centerX,
       FOCUS_RING.centerY,
       this.ensureFocusInnerTexture(),
     ).setDisplaySize(FOCUS_RING.innerRadius * 2, FOCUS_RING.innerRadius * 2);
-    this.hudLayer.add(innerCircle);
-    this.dialTexture = this.ensureFocusDialTexture();
-    const dialSize = (FOCUS_RING.outerRadius + FOCUS_RING.ringWidth / 2 + 3) * 2;
-    const dial = this.add
-      .image(FOCUS_RING.centerX, FOCUS_RING.centerY, PrototypeScene.FOCUS_DIAL_TEXTURE)
-      .setDisplaySize(dialSize, dialSize);
-    this.hudLayer.add(dial);
+    contents.add(innerCircle);
     const focus = snapshot.focus;
-    const remaining = focus ? focusRemainingRatio(focus.remainingMs, focus.totalMs) : 0;
-    this.drawFocusDial(remaining);
 
     const island = this.add.image(FOCUS_RING.centerX, 203, FOCUS_TEXTURES.island).setScale(FOCUS_RING.islandScale);
     const mascot = this.add
       .image(FOCUS_RING.centerX, 225, resolveFocusTexture(focus?.taskId ?? 'book'))
       .setOrigin(0.5, 1)
       .setScale(FOCUS_RING.mascotScale);
-    this.hudLayer.add([island, mascot]);
+    this.focusMascot = mascot;
+    contents.add([island, mascot]);
 
     if (!shouldReduceFocusMotion()) {
       this.tweens.add({
@@ -176,51 +188,8 @@ export class PrototypeScene extends Phaser.Scene {
     const glow = this.add.graphics();
     glow.lineStyle(12, FOCUS_RING.glowColor, 0.4);
     glow.strokeCircle(FOCUS_RING.centerX, FOCUS_RING.centerY, FOCUS_RING.innerRadius - 8);
-    this.hudLayer.add(glow);
+    contents.add(glow);
     this.focusEnvironment.setPaused(focus?.paused ?? false);
-  }
-
-  private drawFocusDial(remainingRatio: number): void {
-    if (!this.dialTexture) return;
-    const context = this.dialTexture.getContext();
-    const textureScale = 3;
-    const logicalSize = this.dialTexture.width / textureScale;
-    const center = logicalSize / 2;
-    context.setTransform(textureScale, 0, 0, textureScale, 0, 0);
-    context.clearRect(0, 0, logicalSize, logicalSize);
-    context.lineCap = 'round';
-    context.lineWidth = FOCUS_RING.ringWidth;
-    context.strokeStyle = '#1998dc';
-    context.beginPath();
-    context.arc(center, center, FOCUS_RING.outerRadius, 0, Math.PI * 2);
-    context.stroke();
-
-    const progress = Math.max(0, Math.min(1, remainingRatio));
-    const start = -Math.PI / 2;
-    if (progress > 0.001) {
-      const end = start + Math.PI * 2 * progress * (FOCUS_RING.clockwise ? 1 : -1);
-      context.lineWidth = FOCUS_RING.ringWidth;
-      context.strokeStyle = '#f4f587';
-      context.beginPath();
-      context.arc(center, center, FOCUS_RING.outerRadius, start, end, !FOCUS_RING.clockwise);
-      context.stroke();
-    }
-    context.lineWidth = FOCUS_RING.whiteStrokeWidth;
-    context.strokeStyle = 'rgba(255,255,255,0.98)';
-    context.beginPath();
-    context.arc(center, center, FOCUS_RING.innerRadius + 2, 0, Math.PI * 2);
-    context.stroke();
-    this.dialTexture.refresh();
-  }
-
-  private ensureFocusDialTexture(): Phaser.Textures.CanvasTexture {
-    const key = PrototypeScene.FOCUS_DIAL_TEXTURE;
-    if (this.textures.exists(key)) return this.textures.get(key) as Phaser.Textures.CanvasTexture;
-    const textureScale = 3;
-    const logicalSize = (FOCUS_RING.outerRadius + FOCUS_RING.ringWidth / 2 + 3) * 2;
-    const texture = this.textures.createCanvas(key, logicalSize * textureScale, logicalSize * textureScale);
-    if (!texture) throw new Error('Unable to create focus dial texture');
-    return texture;
   }
 
   private ensureFocusInnerTexture(): string {
@@ -244,52 +213,60 @@ export class PrototypeScene extends Phaser.Scene {
     return key;
   }
 
-  private renderCelebration(kind: 'build' | 'medal'): void {
-    this.prepareFixedScreen(0xfff9f0);
-    const mascot = this.add.image(406, 195, PLACEHOLDER_KEYS.mascot).setScale(kind === 'medal' ? 1.2 : 1.1);
-    this.hudLayer.add(mascot);
-    this.tweens.add({ targets: mascot, scale: kind === 'medal' ? 1.34 : 1.22, y: mascot.y - 12, duration: 420, yoyo: true, repeat: 2 });
-    const colors = [0xe88a6e, 0xfec845, 0x54cdfd, 0xb8cc7e];
-    for (let index = 0; index < 18; index += 1) {
-      const dot = this.add.circle(260 + (index % 9) * 36, 120 + Math.floor(index / 9) * 18, 5, colors[index % colors.length]);
-      this.hudLayer.add(dot);
-      this.tweens.add({ targets: dot, y: dot.y + 90 + (index % 3) * 8, alpha: 0, duration: 1_300, delay: index * 35 });
-    }
+  private finishFocus(): void {
+    const reduced = shouldReduceFocusMotion();
+    if (this.focusMascot) this.tweens.killTweensOf(this.focusMascot);
+    this.focusEnvironment?.fadeForSettlement(reduced ? 150 : 300);
+    if (!this.focusContents) return;
+    this.tweens.add({
+      targets: this.focusContents,
+      scale: reduced ? 1 : 0,
+      alpha: 0,
+      duration: reduced ? 150 : 300,
+      ease: 'Cubic.easeIn',
+    });
   }
 
-  private renderBuild(items: PlacedItem[], stage: MapStage, assetId: string | null): void {
-    this.prepareMap(stage, items, Boolean(assetId));
+  private renderBuild(items: PlacedItem[], stage: MapStage, assetId: string | null, flipped: boolean): void {
+    this.prepareMap(stage, items, 1, true);
     if (!assetId) return;
     const asset = getAsset(assetId);
-    const tray = this.add.rectangle(406, 342, 780, 58, COLORS.card, 0.97).setStrokeStyle(2, 0xd8cbb8, 0.76);
+    const edgeShading = this.add.graphics();
+    const edge = 0x218fd5;
+    edgeShading.fillGradientStyle(edge, edge, edge, edge, 1, 1, 0, 0);
+    edgeShading.fillRect(0, 0, GAME_WIDTH, 96);
+    edgeShading.fillGradientStyle(edge, edge, edge, edge, 0, 0, 1, 1);
+    edgeShading.fillRect(0, GAME_HEIGHT - 105, GAME_WIDTH, 105);
+    const { x, y, width, height } = PLACEMENT_PREVIEW;
+    const frame = this.textures.getFrame(asset.runtimeTextureKey);
+    const scale = fitAssetImage(frame.width, frame.height, width, height);
+    // The DOM draws the preview over the card. This zone keeps Phaser's drag input and coordinates.
     const candidate = this.add
-      .image(78, 338, asset.runtimeTextureKey)
+      .zone(x, y, frame.width * scale, frame.height * scale)
       .setInteractive({ useHandCursor: true });
-    candidate.setScale(fitAssetImage(candidate.width, candidate.height, 60, 46));
-    const status = this.add
-      .text(128, 338, `拖动${asset.name}到合适的空地`, {
-        fontFamily: 'PingFang SC, Microsoft YaHei, sans-serif',
-        fontSize: '16px',
-        color: '#4A3B2A',
-      })
-      .setOrigin(0, 0.5);
-    this.hudLayer.add([tray, candidate, status]);
+    const updatePreview = (message: string | null, position: PlacementFeedback['position']): void => {
+      window.dispatchEvent(new CustomEvent<PlacementFeedback>('hook-island-placement-status', { detail: { message, position } }));
+    };
+    this.hudLayer.add([edgeShading, candidate]);
 
+    const highlight = this.add.rectangle(0, 0, asset.footprint.width * TILE_SIZE, asset.footprint.height * TILE_SIZE, 0x648d19, 0.24).setVisible(false);
     const ghost = this.add
       .image(0, 0, asset.runtimeTextureKey)
+      .setFlipX(flipped)
       .setAlpha(0.72)
       .setVisible(false)
       .setDepth(10_000);
     const ghostScale = placedAssetScale(asset, ghost.width, ghost.height);
     ghost.setScale(ghostScale);
-    this.worldLayer.add(ghost);
+    this.worldLayer.add([highlight, ghost]);
     this.input.setDraggable(candidate);
     let candidateGrid: { x: number; y: number } | null = null;
     let candidateValid = false;
 
     candidate.on('dragstart', () => {
       this.cameraController.setInteractionLocked(true);
-      ghost.setVisible(true);
+      candidateGrid = null;
+      candidateValid = false;
     });
     candidate.on('drag', (_pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
       candidate.setPosition(dragX, dragY);
@@ -298,17 +275,20 @@ export class PrototypeScene extends Phaser.Scene {
       const center = gridToWorldCenter(candidateGrid.x, candidateGrid.y, asset.footprint);
       const result = validatePlacement({ assetId, gridX: candidateGrid.x, gridY: candidateGrid.y, stage, items });
       candidateValid = result.valid;
-      ghost.setPosition(center.x, center.y).setTint(result.valid ? 0xffffff : COLORS.invalid);
-      if (result.valid) status.setText('松手即可建造');
-      else if (result.reason === 'wrong-terrain') status.setText('这个物件不适合当前地形');
-      else if (result.reason === 'overlap') status.setText('这里已有建筑或公共地标');
-      else status.setText('水域和岛外不能建造');
+      ghost.setPosition(center.x, center.y).setVisible(true).setTint(result.valid ? 0xffffff : COLORS.invalid);
+      highlight.setPosition(center.x, center.y).setVisible(true).setFillStyle(result.valid ? 0x648d19 : 0xc6544b, 0.24);
+      const position = { x: dragX, y: dragY };
+      if (result.valid) updatePreview('松手即可建造', position);
+      else if (result.reason === 'wrong-terrain') updatePreview('这个物件不适合当前地形', position);
+      else if (result.reason === 'overlap') updatePreview('这里已有建筑', position);
+      else updatePreview('水域和岛外不能建造', position);
     });
     candidate.on('dragend', () => {
       this.cameraController.setInteractionLocked(false);
+      highlight.setVisible(false);
       if (candidateValid && candidateGrid) {
-        candidate.disableInteractive();
-        status.setText('建造成功！');
+        candidate.disableInteractive().setVisible(false);
+        updatePreview('建造成功！', null);
         ghost.clearTint().setAlpha(1);
         this.tweens.add({
           targets: ghost,
@@ -319,8 +299,8 @@ export class PrototypeScene extends Phaser.Scene {
         });
       } else {
         ghost.setVisible(false).clearTint();
-        candidate.setPosition(78, 338);
-        status.setText('换一个空着的合法格子再试试');
+        candidate.setPosition(x, y);
+        updatePreview(null, PLACEMENT_PREVIEW);
       }
     });
   }

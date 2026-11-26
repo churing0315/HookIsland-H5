@@ -1,6 +1,13 @@
 import type { AssetCatalogEntry } from '../data/assetCatalog';
 import { TILE_SIZE } from '../map/mapConfig';
 
+export const PLACEMENT_PREVIEW = { x: 273, y: 300, width: 84, height: 82 };
+
+export interface PlacementFeedback {
+  message: string | null;
+  position: { x: number; y: number } | null;
+}
+
 export function fitAssetImage(width: number, height: number, maxWidth: number, maxHeight: number): number {
   return Math.min(maxWidth / width, maxHeight / height);
 }

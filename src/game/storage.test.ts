@@ -70,14 +70,15 @@ describe('V2 local persistence and migration', () => {
     expect(Number.isInteger(migrated.placedItems[0].gridX)).toBe(true);
   });
 
-  it('preserves the fourth completion as a medal while enforcing three builds', () => {
+  it('round-trips daily counts above the disabled placement limit', () => {
     const now = new Date(2026, 10, 20, 12, 0, 0);
     const migrated = normalizeGameData(
       { version: 1, daily: { dayKey: '2026-11-20', planted: 4 }, placedItems: [] },
       now,
     );
-    expect(migrated.daily.planted).toBe(3);
-    expect(migrated.daily.bonusMedalAwarded).toBe(true);
+    expect(migrated.daily.planted).toBe(4);
+    expect(migrated.daily.completed).toBe(4);
+    expect(migrated.daily.bonusMedalAwarded).toBe(false);
   });
 
   it('resets only daily progress on a new day', () => {

@@ -1,4 +1,4 @@
-export type AudioEffect = 'click' | 'confirm' | 'unavailable';
+export type AudioEffect = 'click' | 'confirm' | 'unavailable' | 'focusSuccess';
 export type ButtonAudioPolicy = 'default' | 'custom';
 
 const ROOT = '/assets/audio';
@@ -8,6 +8,7 @@ export const AUDIO_ASSETS = {
   islandBgm: `${ROOT}/birds-morning.wav`,
   confirm: `${ROOT}/confirmbtn.wav`,
   unavailable: `${ROOT}/unableclick.wav`,
+  focusSuccess: `${ROOT}/right-NZB.mp3`,
   homePinkyReserved: `${ROOT}/homepinky.wav`,
 } as const;
 
