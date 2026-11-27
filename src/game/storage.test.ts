@@ -15,6 +15,14 @@ class MemoryStorage implements StorageLike {
 }
 
 describe('V2 local persistence and migration', () => {
+  it('initializes older saves and keeps active progress even after the first placement', () => {
+    expect(normalizeGameData({}).guide).toEqual({ step: 0, completed: false });
+    expect(normalizeGameData({ totalPlaced: 1 }).guide).toEqual({ step: 12, completed: true });
+    expect(normalizeGameData({ totalPlaced: 1, guide: { step: 9, completed: false, buildingId: 'tree' } }).guide)
+      .toEqual({ step: 9, completed: false, buildingId: 'tree' });
+    expect(normalizeGameData({ guide: { step: -8, completed: false } }).guide).toEqual({ step: 0, completed: false });
+  });
+
   it('creates a stable local day key', () => {
     expect(localDayKey(new Date(2026, 10, 20, 12, 0, 0))).toBe('2026-11-20');
   });

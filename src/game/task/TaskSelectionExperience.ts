@@ -6,13 +6,12 @@ import { DurationSelector } from './DurationSelector';
 import { bindPressFeedback } from './pressFeedback';
 import { TaskCarousel } from './TaskCarousel';
 import { TaskSelectionStateController, type TaskSelectionStep } from './TaskSelectionStateController';
-import { VoiceManager } from './VoiceManager';
+import type { VoiceManager } from './VoiceManager';
 import { findTaskVisual, TASK_ASSETS, TASK_VISUALS } from './taskConfig';
 
 export class TaskSelectionExperience {
   private snapshot: GameSnapshot;
   private readonly state = new TaskSelectionStateController();
-  private readonly voice = new VoiceManager();
   private readonly cleanup: Array<() => void> = [];
   private carousel: TaskCarousel | null = null;
   private durationSelector: DurationSelector | null = null;
@@ -29,12 +28,16 @@ export class TaskSelectionExperience {
     private readonly flow: GameFlow,
     snapshot: GameSnapshot,
     private readonly audio: GameAudioManager,
+    private readonly voice: VoiceManager,
+    private readonly guide: { active: boolean; taskPhase: (phase: TaskSelectionStep) => void },
   ) {
     this.snapshot = snapshot;
   }
 
   mount(): void {
-    this.renderStep('TASK_SELECT');
+    const step = this.snapshot.data.guide?.step;
+    this.renderStep(this.guide.active && step === 4 && this.snapshot.selectedMinutes !== null ? 'CONTRACT_CONFIRM'
+      : this.guide.active && step === 3 ? 'DURATION_SELECT' : 'TASK_SELECT');
   }
 
   syncSnapshot(snapshot: GameSnapshot): void {
@@ -47,7 +50,6 @@ export class TaskSelectionExperience {
   destroy(): void {
     this.destroyed = true;
     this.clearStep();
-    this.voice.destroy();
   }
 
   private renderStep(step: TaskSelectionStep): void {
@@ -124,12 +126,12 @@ export class TaskSelectionExperience {
           if (playVoice) this.voice.play(task.voice);
         },
       });
-      this.voice.startPrompt(TASK_ASSETS.promptTaskVoice);
+      if (!this.guide.active) this.voice.startPrompt(TASK_ASSETS.promptTaskVoice);
     } else if (step === 'DURATION_SELECT') {
       carouselRoot.hidden = true;
       this.prompt.src = TASK_ASSETS.promptDuration;
       this.mountDurationSelector();
-      this.voice.startPrompt(TASK_ASSETS.promptDurationVoice);
+      if (!this.guide.active) this.voice.startPrompt(TASK_ASSETS.promptDurationVoice);
     } else {
       carouselRoot.hidden = true;
       this.prompt.hidden = true;
@@ -139,6 +141,7 @@ export class TaskSelectionExperience {
       this.mountConfirmation();
     }
     this.updateNextAvailability();
+    this.guide.taskPhase(step);
   }
 
   private mountDurationSelector(): void {
@@ -147,7 +150,7 @@ export class TaskSelectionExperience {
     this.durationSelector = new DurationSelector(this.durationRoot, this.snapshot.selectedMinutes, {
       onSelected: (duration) => {
         this.flow.selectMinutes(duration.minutes);
-        this.voice.play(duration.voice);
+        if (!this.guide.active) this.voice.play(duration.voice);
       },
     });
   }
@@ -173,7 +176,7 @@ export class TaskSelectionExperience {
 
   private async showDurationStep(): Promise<void> {
     if (!this.state.beginTransition()) return;
-    this.voice.stopPrompt();
+    if (!this.guide.active) this.voice.stopPrompt();
     if (this.nextButton) this.nextButton.setAttribute('aria-disabled', 'true');
     await this.carousel?.exit();
     if (this.destroyed || !this.durationRoot || !this.prompt) return;
@@ -188,12 +191,13 @@ export class TaskSelectionExperience {
     window.setTimeout(() => this.prompt?.classList.remove('is-switching'), 180);
     this.state.finishTransition('DURATION_SELECT');
     this.updateNextAvailability();
-    this.voice.startPrompt(TASK_ASSETS.promptDurationVoice);
+    if (!this.guide.active) this.voice.startPrompt(TASK_ASSETS.promptDurationVoice);
+    this.guide.taskPhase('DURATION_SELECT');
   }
 
   private async showConfirmStep(): Promise<void> {
     if (!this.state.beginTransition() || !this.durationSelector || !this.panel) return;
-    this.voice.stopPrompt();
+    if (!this.guide.active) this.voice.stopPrompt();
     if (this.nextButton) this.nextButton.setAttribute('aria-disabled', 'true');
     await this.durationSelector.transitionToConfirm();
     if (this.destroyed) return;
@@ -204,6 +208,7 @@ export class TaskSelectionExperience {
     if (this.destroyed) return;
     this.mountConfirmation();
     this.state.finishTransition('CONTRACT_CONFIRM');
+    this.guide.taskPhase('CONTRACT_CONFIRM');
   }
 
   private mountConfirmation(): void {
@@ -228,7 +233,7 @@ export class TaskSelectionExperience {
   }
 
   private clearStep(): void {
-    this.voice.stopPrompt();
+    if (!this.guide.active) this.voice.stopPrompt();
     this.carousel?.destroy();
     this.durationSelector?.destroy();
     this.confirm?.destroy();

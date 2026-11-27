@@ -16,7 +16,7 @@ import {
 import { IslandCameraController } from '../map/IslandCameraController';
 import { IslandBuildingEditor } from '../map/IslandBuildingEditor';
 import { effectiveMapStage } from '../map/IslandExpansionService';
-import { IslandMapRenderer } from '../map/IslandMapRenderer';
+import { IslandMapRenderer, type IslandBuildingSprite } from '../map/IslandMapRenderer';
 import { gridToWorldAnchor, gridToWorldCenter, TILE_SIZE, worldToGrid } from '../map/mapConfig';
 import type { GameFlow } from '../state/GameFlow';
 import type { GameSnapshot, MapStage, PlacedItem } from '../types';
@@ -36,6 +36,7 @@ export class PrototypeScene extends Phaser.Scene {
   private focusMascot: Phaser.GameObjects.Image | null = null;
   private buildingEditor: IslandBuildingEditor | null = null;
   private renderedBuildings: PlacedItem[] | null = null;
+  private islandSprites: IslandBuildingSprite[] = [];
 
   constructor() {
     super('prototype');
@@ -69,6 +70,20 @@ export class PrototypeScene extends Phaser.Scene {
       this.buildingEditor?.destroy();
       this.cameraController.destroy();
     });
+  }
+
+  update(): void {
+    const { screen, data: { guide } } = this.flow.getSnapshot();
+    if (screen !== 'island' || guide?.completed || guide?.step !== 9) return;
+    const sprite = this.islandSprites.find(({ item }) => item.id === guide.buildingId);
+    const camera = this.cameras.main;
+    const origin = camera.getWorldPoint(0, 0);
+    const bounds = sprite?.image.getBounds();
+    const detail = bounds ? {
+      x: (bounds.centerX - origin.x) * camera.zoom,
+      y: (bounds.centerY - origin.y) * camera.zoom,
+    } : null;
+    window.dispatchEvent(new CustomEvent('hook-island-guide-building-point', { detail }));
   }
 
   private render(snapshot: GameSnapshot): void {
@@ -135,6 +150,7 @@ export class PrototypeScene extends Phaser.Scene {
 
   private renderIsland(items: PlacedItem[], stage: MapStage, alpha = 1): void {
     const { sprites, sort } = this.prepareMap(stage, items, alpha);
+    this.islandSprites = sprites;
     this.buildingEditor = new IslandBuildingEditor(this, this.cameraController, this.flow, stage, sprites, sort);
   }
 

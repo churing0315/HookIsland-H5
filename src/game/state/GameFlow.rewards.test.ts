@@ -24,6 +24,39 @@ describe('building rewards', () => {
     vi.unstubAllGlobals();
   });
 
+  it('restores the reward at the end cue and settles exactly once', async () => {
+    const flow = new GameFlow();
+    flow.setGuide({ step: 4, completed: false, taskId: 'book', minutes: 5 });
+    flow.openTaskSelect();
+    flow.selectMinutes(5);
+    flow.confirmContract();
+    flow.completeRitual();
+    flow.setBeforeSettlement(() => new Promise(() => undefined));
+    vi.advanceTimersByTime(5 * 60_000);
+    expect(flow.getSnapshot()).toMatchObject({ screen: 'focus', data: { guide: { step: 6 } } });
+    const [reward] = flow.getSnapshot().data.storedBuildings;
+    flow.destroy();
+
+    const resumed = new GameFlow();
+    let endCue!: () => void;
+    resumed.setBeforeSettlement(() => new Promise<void>(resolve => { endCue = resolve; }));
+    vi.advanceTimersByTime(100);
+    expect(resumed.getSnapshot().data.storedBuildings).toHaveLength(1);
+    endCue();
+    await Promise.resolve();
+    expect(resumed.getSnapshot()).toMatchObject({
+      screen: 'celebration', selectedBuildingId: reward.id, data: { guide: { step: 7 } },
+    });
+    expect(resumed.placeStoredBuilding(reward.id)).toBe(true);
+    const restoredBuild = new GameFlow();
+    expect(restoredBuild.getSnapshot()).toMatchObject({ screen: 'build', selectedBuildingId: reward.id });
+    const position = findNearestValidPlacement(reward.assetId, 8, 5, 0, [])!;
+    restoredBuild.commitPlacement(reward.assetId, position.x, position.y);
+    expect(new GameFlow().getSnapshot()).toMatchObject({
+      screen: 'island', data: { guide: { step: 9, buildingId: reward.id }, totalPlaced: 1 },
+    });
+  });
+
   it.each(tiers)('awards and saves a %i-minute tier-%i building', (minutes, tier, count) => {
     const pool = REWARD_BUILDINGS.filter((reward) => reward.minutes === minutes);
     expect(pool).toHaveLength(count);

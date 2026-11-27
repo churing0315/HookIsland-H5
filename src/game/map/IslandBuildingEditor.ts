@@ -8,7 +8,7 @@ import type { IslandBuildingSprite } from './IslandMapRenderer';
 import { gridToWorldAnchor, worldToGrid } from './mapConfig';
 
 type EditAction = 'flip' | 'store' | 'confirm' | 'cancel';
-export interface BuildingEditControls { x: number; y: number; valid: boolean; flipped: boolean }
+export interface BuildingEditControls { id: string; x: number; y: number; valid: boolean; flipped: boolean }
 const EDIT_BOB_HEIGHT = 5;
 
 interface Press {
@@ -179,6 +179,7 @@ export class IslandBuildingEditor {
     const centerX = x + draft.image.displayWidth / 2 - draft.image.displayOriginX * draft.image.scaleX;
     const top = y - draft.image.displayOriginY * draft.image.scaleY - (this.bob ? EDIT_BOB_HEIGHT : 0);
     const controls: BuildingEditControls = {
+      id: draft.item.id,
       x: (centerX - origin.x) * camera.zoom,
       y: (top - origin.y) * camera.zoom - 6,
       valid: draft.valid,

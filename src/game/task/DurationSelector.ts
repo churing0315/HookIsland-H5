@@ -50,6 +50,7 @@ export class DurationSelector {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'task-v2-duration';
+      button.dataset.minutes = String(duration.minutes);
       button.dataset.audioPolicy = 'custom';
       button.style.setProperty('--duration-index', String(index));
       button.style.setProperty('--confirm-shift', `${(1.5 - index) * this.root.clientWidth * 0.2044}px`);

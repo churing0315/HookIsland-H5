@@ -46,6 +46,15 @@ export type StoredBuilding = Pick<PlacedItem, 'id' | 'assetId' | 'taskId' | 'tas
   unread?: boolean;
 };
 
+export interface GuideProgress {
+  step: number;
+  completed: boolean;
+  taskId?: string;
+  minutes?: FocusMinutes;
+  focus?: { totalMs: number; remainingMs: number; deadline: number | null };
+  buildingId?: string;
+}
+
 export interface PersistedGameData {
   version: 2;
   schemaVersion: 2;
@@ -61,6 +70,7 @@ export interface PersistedGameData {
   };
   placedItems: PlacedItem[];
   storedBuildings: StoredBuilding[];
+  guide?: GuideProgress;
 }
 
 export interface GameSnapshot {

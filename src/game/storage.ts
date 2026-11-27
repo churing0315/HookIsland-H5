@@ -1,10 +1,11 @@
 import { STORAGE_KEY } from './config';
 import { getAsset } from './data/assetCatalog';
 import { REWARD_BUILDINGS } from './data/rewardBuildings';
+import { TASKS } from './data/tasks';
 import { findNearestValidPlacement, isFootprintUnlocked } from './domain/placement';
 import { resolveStoredMapStage, unlockedTileSets } from './map/IslandExpansionService';
 import { getMapStageConfig, gridToWorldAnchor } from './map/mapConfig';
-import type { PersistedGameData, PlacedItem, StoredBuilding } from './types';
+import type { GuideProgress, PersistedGameData, PlacedItem, StoredBuilding } from './types';
 
 export interface StorageLike {
   getItem(key: string): string | null;
@@ -40,6 +41,7 @@ export function emptyData(now = new Date()): PersistedGameData {
     },
     placedItems: [],
     storedBuildings: [],
+    guide: { step: 0, completed: false },
   };
 }
 
@@ -111,6 +113,28 @@ function normalizeItems(value: unknown): PlacedItem[] {
   return normalized;
 }
 
+function normalizeGuide(value: unknown, totalPlaced: number): GuideProgress {
+  if (!isRecord(value)) return { step: totalPlaced > 0 ? 12 : 0, completed: totalPlaced > 0 };
+  if (value.completed === true) return { step: 12, completed: true };
+  const step = typeof value.step === 'number' && Number.isInteger(value.step)
+    ? Math.min(11, Math.max(0, value.step)) : 0;
+  const guide: GuideProgress = { step, completed: false };
+  if (typeof value.taskId === 'string' && TASKS.some(({ id }) => id === value.taskId)) guide.taskId = value.taskId;
+  if (value.minutes === 5 || value.minutes === 10 || value.minutes === 15 || value.minutes === 20) guide.minutes = value.minutes;
+  if (typeof value.buildingId === 'string' && value.buildingId) guide.buildingId = value.buildingId;
+  const focus = value.focus;
+  if (isRecord(focus) && typeof focus.totalMs === 'number' && Number.isFinite(focus.totalMs) && focus.totalMs > 0
+    && typeof focus.remainingMs === 'number' && Number.isFinite(focus.remainingMs)
+    && (focus.deadline === null || (typeof focus.deadline === 'number' && Number.isFinite(focus.deadline)))) {
+    guide.focus = {
+      totalMs: focus.totalMs,
+      remainingMs: Math.max(0, Math.min(focus.totalMs, focus.remainingMs)),
+      deadline: focus.deadline,
+    };
+  }
+  return guide;
+}
+
 export function normalizeGameData(value: unknown, now = new Date()): PersistedGameData {
   if (!isRecord(value)) return emptyData(now);
   const items = normalizeItems(value.placedItems);
@@ -166,6 +190,7 @@ export function normalizeGameData(value: unknown, now = new Date()): PersistedGa
     daily: { dayKey: today, planted, completed, bonusMedalAwarded },
     placedItems,
     storedBuildings,
+    guide: normalizeGuide(value.guide, totalPlaced),
   };
 }
 

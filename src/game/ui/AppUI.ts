@@ -4,11 +4,14 @@ import { GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { getAsset } from '../data/assetCatalog';
 import { REWARD_BUILDINGS } from '../data/rewardBuildings';
 import { FOCUS_ASSET_ROOT, FOCUS_RING, focusRemainingRatio, formatFocusTime, shouldReduceFocusMotion } from '../focus/focusConfig';
+import { GuideController, type GuidePoint } from '../guide/GuideController';
+import { GUIDE_ASSETS } from '../guide/guideConfig';
 import { effectiveMapStage } from '../map/IslandExpansionService';
 import type { BuildingEditControls } from '../map/IslandBuildingEditor';
 import type { GameFlow } from '../state/GameFlow';
 import { TaskSelectionExperience } from '../task/TaskSelectionExperience';
 import { PactRitualOverlay } from '../task/PactRitualOverlay';
+import { VoiceManager } from '../task/VoiceManager';
 import type { GameSnapshot } from '../types';
 import { buildingIdAttribute, focusRewardMarkup } from './focusRewardMarkup';
 
@@ -20,19 +23,24 @@ export class AppUI {
   private ritualOverlay: PactRitualOverlay | null = null;
   private focusClockFrame: number | null = null;
   private readonly audio: GameAudioManager;
+  private readonly voice = new VoiceManager();
+  private readonly guide: GuideController;
 
   constructor(
     private readonly root: HTMLElement,
     private readonly flow: GameFlow,
   ) {
     this.audio = new GameAudioManager(root);
+    this.guide = new GuideController(root, flow, this.voice);
   }
 
   mount(): void {
     this.audio.mount();
+    this.flow.setBeforeSettlement(() => this.guide.focusEnded());
     this.root.addEventListener('click', this.handleClick);
     window.addEventListener('hook-island-placement-status', this.handlePlacementStatus);
     window.addEventListener('hook-island-edit-controls', this.handleBuildingEditControls);
+    window.addEventListener('hook-island-guide-building-point', this.handleGuidePoint);
     this.unsubscribe = this.flow.subscribe((snapshot) => {
       this.snapshot = snapshot;
       if (snapshot.screen === 'ritual' && this.taskExperience && this.renderedScreen === 'task-select') {
@@ -60,7 +68,15 @@ export class AppUI {
     window.removeEventListener('hook-island-placement-status', this.handlePlacementStatus);
     window.removeEventListener('hook-island-edit-controls', this.handleBuildingEditControls);
     this.audio.destroy();
+    this.flow.setBeforeSettlement(null);
+    window.removeEventListener('hook-island-guide-building-point', this.handleGuidePoint);
+    this.guide.destroy();
+    this.voice.destroy();
   }
+
+  private readonly handleGuidePoint = (event: Event): void => {
+    this.guide.pointAtBuilding((event as CustomEvent<GuidePoint | null>).detail);
+  };
 
   private readonly handlePlacementStatus = (event: Event): void => {
     this.updatePlacementStatus((event as CustomEvent<PlacementFeedback>).detail);
@@ -68,6 +84,7 @@ export class AppUI {
 
   private readonly handleBuildingEditControls = (event: Event): void => {
     const controls = (event as CustomEvent<BuildingEditControls | null>).detail;
+    if (controls) this.guide.editedBuilding(controls.id);
     const toolbar = this.root.querySelector<HTMLElement>('.island-edit-tools');
     if (!toolbar) return;
     toolbar.hidden = controls === null;
@@ -97,7 +114,10 @@ export class AppUI {
     if (!target) return;
     if (target.matches(':disabled, [aria-disabled="true"]')) return;
     const action = target.dataset.action;
-    if (action === 'open-task') this.flow.openTaskSelect();
+    if (action === 'open-task') {
+      this.guide.openTask();
+      this.flow.openTaskSelect();
+    }
     if (action === 'back-island') this.flow.returnToIsland();
     if (action === 'pack-up-building') this.flow.returnToIsland();
     if (action === 'edit-building') window.dispatchEvent(new CustomEvent('hook-island-edit-action', { detail: target.dataset.edit }));
@@ -105,6 +125,7 @@ export class AppUI {
       window.dispatchEvent(new CustomEvent('hook-island-edit-action', { detail: 'cancel' }));
     }
     if (action === 'open-building-storage') {
+      this.guide.openedStorage();
       this.flow.markBuildingStorageRead();
       this.root.querySelector<HTMLDialogElement>('.building-storage')?.showModal();
     }
@@ -135,13 +156,14 @@ export class AppUI {
         break;
       case 'task-select':
         this.root.innerHTML = fastChip;
-        this.taskExperience = new TaskSelectionExperience(this.root, this.flow, this.snapshot, this.audio);
+        this.guide.rendered('task-select');
+        this.taskExperience = new TaskSelectionExperience(this.root, this.flow, this.snapshot, this.audio, this.voice, this.guide);
         this.taskExperience.mount();
-        break;
+        return;
       case 'ritual':
         this.root.innerHTML = fastChip;
         this.mountRitualOverlay();
-        break;
+        return;
       case 'focus':
         this.root.innerHTML = this.focusMarkup();
         this.startFocusClock();
@@ -162,6 +184,10 @@ export class AppUI {
               this.audio.playFocusSuccess();
             };
           }
+          const rewardPage = this.root.querySelector<HTMLElement>('.reward-page');
+          if (rewardPage) rewardPage.onanimationend = (event) => {
+            if (event.target === rewardPage && event.animationName === 'reward-reveal') this.guide.rewardRevealed();
+          };
         }
         break;
       case 'build': {
@@ -180,14 +206,17 @@ export class AppUI {
         break;
       }
     }
+    this.guide.rendered(this.snapshot.screen);
   }
 
   private mountRitualOverlay(): void {
     if (this.ritualOverlay) return;
+    this.guide.rendered('ritual');
     this.ritualOverlay = new PactRitualOverlay(this.root, {
       onComplete: () => this.flow.completeRitual(),
     });
     this.ritualOverlay.mount();
+    this.voice.play(`${GUIDE_ASSETS}/yes.mp3`);
   }
 
   private islandMarkup(): string {

@@ -69,6 +69,47 @@ button {
   pointer-events: auto;
 }
 
+.guide-layer {
+  position: absolute;
+  z-index: 60;
+  inset: 0;
+  pointer-events: none;
+}
+
+.guide-finger {
+  position: absolute;
+  width: clamp(33.6px, 7.2cqw, 64px);
+  animation: guide-finger-pulse 1s ease-in-out infinite alternate;
+  filter: drop-shadow(0 2px 3px #224a6338);
+}
+
+.guide-bubble {
+  position: absolute;
+  inset: 5% auto auto 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 80%;
+  margin: 0;
+  padding: .5em .85em;
+  border-radius: 1em;
+  background: #fff9e8;
+  color: #4a3b2a;
+  font-size: clamp(1rem, 2.2cqw, 1.25rem);
+  box-shadow: 0 3px 10px #224a632b;
+}
+
+.guide-bubble-welcome {
+  inset: 16% auto auto 50%;
+}
+
+@keyframes guide-finger-pulse {
+  to { transform: translateY(-8px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guide-finger { animation: none; }
+}
+
 .topbar,
 .focus-header {
   position: absolute;
