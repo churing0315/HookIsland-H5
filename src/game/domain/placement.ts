@@ -1,13 +1,12 @@
 import { getAsset } from '../data/assetCatalog';
-import { getMapStageConfig, getTile, tileKey } from '../map/mapConfig';
-import type { Footprint, MapStage, PlacedItem, TerrainType } from '../types';
+import { getMapStageConfig, tileKey } from '../map/mapConfig';
+import type { Footprint, MapStage, PlacedItem } from '../types';
 
-export type PlacementFailure = 'outside-map' | 'wrong-terrain' | 'overlap';
+export type PlacementFailure = 'outside-map' | 'overlap';
 
 export interface PlacementResult {
   valid: boolean;
   reason: PlacementFailure | null;
-  terrains: TerrainType[];
 }
 
 export interface PlacementRequest {
@@ -29,7 +28,9 @@ export function footprintCells(gridX: number, gridY: number, footprint: Footprin
 function occupiedCells(items: PlacedItem[]): Set<string> {
   const occupied = new Set<string>();
   for (const item of items) {
-    const footprint = item.footprint ?? getAsset(item.assetId).footprint;
+    const asset = getAsset(item.assetId);
+    if (asset.blocksCell === false) continue;
+    const footprint = item.footprint ?? asset.footprint;
     for (const cell of footprintCells(item.gridX, item.gridY, footprint)) occupied.add(tileKey(cell.x, cell.y));
   }
   return occupied;
@@ -42,21 +43,21 @@ export function validatePlacement(request: PlacementRequest): PlacementResult {
 function validateFootprint(request: PlacementRequest, occupied: ReadonlySet<string>): PlacementResult {
   const asset = getAsset(request.assetId);
   const cells = footprintCells(request.gridX, request.gridY, asset.footprint);
-  const stage = getMapStageConfig(request.stage);
-  const terrains: TerrainType[] = [];
-
-  for (const cell of cells) {
-    if (!stage.tileKeys.has(tileKey(cell.x, cell.y))) return { valid: false, reason: 'outside-map', terrains };
-    const tile = getTile(request.stage, cell.x, cell.y);
-    if (!tile) return { valid: false, reason: 'outside-map', terrains };
-    terrains.push(tile.terrain);
-    if (!asset.allowedTerrains.includes(tile.terrain)) return { valid: false, reason: 'wrong-terrain', terrains };
-  }
+  if (!cellsAreUnlocked(cells, request.stage)) return { valid: false, reason: 'outside-map' };
 
   if (cells.some((cell) => occupied.has(tileKey(cell.x, cell.y)))) {
-    return { valid: false, reason: 'overlap', terrains };
+    return { valid: false, reason: 'overlap' };
   }
-  return { valid: true, reason: null, terrains };
+  return { valid: true, reason: null };
+}
+
+function cellsAreUnlocked(cells: ReturnType<typeof footprintCells>, stage: MapStage): boolean {
+  const { tileKeys } = getMapStageConfig(stage);
+  return cells.every(({ x, y }) => tileKeys.has(tileKey(x, y)));
+}
+
+export function isFootprintUnlocked(gridX: number, gridY: number, footprint: Footprint, stage: MapStage): boolean {
+  return cellsAreUnlocked(footprintCells(gridX, gridY, footprint), stage);
 }
 
 export function findNearestValidPlacement(

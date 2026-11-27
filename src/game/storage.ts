@@ -1,9 +1,9 @@
 import { STORAGE_KEY } from './config';
 import { getAsset } from './data/assetCatalog';
 import { REWARD_BUILDINGS } from './data/rewardBuildings';
-import { findNearestValidPlacement } from './domain/placement';
+import { findNearestValidPlacement, isFootprintUnlocked } from './domain/placement';
 import { resolveStoredMapStage, unlockedTileSets } from './map/IslandExpansionService';
-import { getMapStageConfig, gridToWorldCenter } from './map/mapConfig';
+import { getMapStageConfig, gridToWorldAnchor } from './map/mapConfig';
 import type { PersistedGameData, PlacedItem, StoredBuilding } from './types';
 
 export interface StorageLike {
@@ -68,7 +68,7 @@ function normalizeItems(value: unknown): PlacedItem[] {
 
   for (const raw of value) {
     if (!isRecord(raw) || typeof raw.id !== 'string') continue;
-    const assetId = text(raw.assetId, 'tree_round');
+    const assetId = text(raw.asset_id, text(raw.assetId, 'tree_round'));
     const asset = getAsset(assetId);
     let gridX = finite(raw.gridX, Number.NaN);
     let gridY = finite(raw.gridY, Number.NaN);
@@ -84,7 +84,7 @@ function normalizeItems(value: unknown): PlacedItem[] {
       gridY = nearest?.y ?? target.y;
     }
 
-    const center = gridToWorldCenter(gridX, gridY, asset.footprint);
+    const center = gridToWorldAnchor(gridX, gridY, asset.footprint);
     normalized.push({
       id: raw.id,
       type: text(raw.type, asset.runtimeTextureKey),
@@ -97,7 +97,7 @@ function normalizeItems(value: unknown): PlacedItem[] {
       taskId: text(raw.taskId, 'legacy'),
       taskName: text(raw.taskName, '旧版约定'),
       minutes: Math.max(0, finite(raw.minutes, 0)),
-      createdAt: text(raw.createdAt, new Date(0).toISOString()),
+      createdAt: text(raw.placed_at, text(raw.createdAt, new Date(0).toISOString())),
       mapVersion: 2,
       flipped: raw.flipped === true,
       legacyPosition: isRecord(raw.legacyPosition)
@@ -114,6 +114,8 @@ function normalizeItems(value: unknown): PlacedItem[] {
 export function normalizeGameData(value: unknown, now = new Date()): PersistedGameData {
   if (!isRecord(value)) return emptyData(now);
   const items = normalizeItems(value.placedItems);
+  const totalPlaced = Math.max(items.length, finite(value.totalPlaced, items.length));
+  const mapStage = resolveStoredMapStage(value.mapStage, totalPlaced);
   const today = localDayKey(now);
   const daily = isRecord(value.daily) ? value.daily : {};
   const storedDay = daily.dayKey;
@@ -121,17 +123,28 @@ export function normalizeGameData(value: unknown, now = new Date()): PersistedGa
   const planted = sameDay ? Math.max(0, finite(daily.planted, 0)) : 0;
   const completed = sameDay ? Math.max(0, finite(daily.completed, planted)) : 0;
   const bonusMedalAwarded = sameDay && daily.bonusMedalAwarded === true;
+  const placedItems: PlacedItem[] = [];
   const storedBuildings: StoredBuilding[] = [];
+  for (const item of items) {
+    if (isFootprintUnlocked(item.gridX, item.gridY, item.footprint, mapStage)) {
+      placedItems.push(item);
+    } else {
+      const { id, assetId, taskId, taskName, minutes, createdAt, flipped } = item;
+      storedBuildings.push({ id, assetId, taskId, taskName, minutes, createdAt, flipped, previouslyPlaced: true, unread: false });
+    }
+  }
   const knownIds = new Set(items.map((item) => item.id));
   if (Array.isArray(value.storedBuildings)) {
     for (const raw of value.storedBuildings) {
       if (!isRecord(raw) || typeof raw.id !== 'string' || knownIds.has(raw.id)) continue;
-      const reward = REWARD_BUILDINGS.find((building) => building.id === raw.assetId);
-      if (typeof raw.assetId !== 'string' || getAsset(raw.assetId).id !== raw.assetId) continue;
+      if (typeof raw.assetId !== 'string') continue;
+      const assetId = getAsset(raw.assetId).id;
+      const reward = REWARD_BUILDINGS.find((building) => building.id === assetId);
+      if (!reward && assetId !== raw.assetId) continue;
       knownIds.add(raw.id);
       storedBuildings.push({
         id: raw.id,
-        assetId: raw.assetId,
+        assetId,
         taskId: text(raw.taskId, 'legacy'),
         taskName: text(raw.taskName, '专注约定'),
         minutes: reward?.minutes ?? Math.max(0, finite(raw.minutes, 0)),
@@ -142,8 +155,6 @@ export function normalizeGameData(value: unknown, now = new Date()): PersistedGa
       });
     }
   }
-  const totalPlaced = Math.max(items.length, finite(value.totalPlaced, items.length));
-  const mapStage = resolveStoredMapStage(value.mapStage, totalPlaced);
 
   return {
     version: 2,
@@ -153,7 +164,7 @@ export function normalizeGameData(value: unknown, now = new Date()): PersistedGa
     unlockedTileSet: unlockedTileSets(mapStage),
     totalPlaced,
     daily: { dayKey: today, planted, completed, bonusMedalAwarded },
-    placedItems: items,
+    placedItems,
     storedBuildings,
   };
 }
@@ -168,5 +179,14 @@ export function loadGameData(storage: StorageLike = window.localStorage, now = n
 }
 
 export function saveGameData(data: PersistedGameData, storage: StorageLike = window.localStorage): void {
-  storage.setItem(STORAGE_KEY, JSON.stringify(data));
+  storage.setItem(STORAGE_KEY, JSON.stringify({
+    ...data,
+    placedItems: data.placedItems.map((item) => ({
+      id: item.id,
+      asset_id: item.assetId,
+      gridX: item.gridX,
+      gridY: item.gridY,
+      placed_at: item.createdAt,
+    })),
+  }));
 }

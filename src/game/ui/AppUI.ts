@@ -72,8 +72,8 @@ export class AppUI {
     if (!toolbar) return;
     toolbar.hidden = controls === null;
     if (!controls) return;
-    toolbar.style.left = `${100 * controls.x / GAME_WIDTH}%`;
-    toolbar.style.top = `${100 * controls.y / GAME_HEIGHT}%`;
+    toolbar.style.setProperty('--edit-center-x', `${100 * controls.x / GAME_WIDTH}%`);
+    toolbar.style.setProperty('--edit-bottom-y', `${100 * controls.y / GAME_HEIGHT}%`);
     toolbar.querySelector('[data-edit="flip"]')?.setAttribute('aria-pressed', String(controls.flipped));
     const confirm = toolbar.querySelector<HTMLButtonElement>('[data-edit="confirm"]');
     if (confirm) confirm.disabled = !controls.valid;
@@ -202,7 +202,7 @@ export class AppUI {
         <img class="mascot-image" src="/assets/v2/mascot-xiaobanlong.png" alt="小伴龙">
       </div>
       <section class="island-info" aria-label="岛屿信息">
-        <div class="island-info-avatar" aria-hidden="true"><div class="island-info-thumb"></div></div>
+        <div class="island-info-avatar" aria-hidden="true"><img class="island-info-thumb" src="/assets/home/hookland_img_avatar.png" alt=""></div>
         <div class="island-info-card">
           <strong>乐乐的小岛</strong>
           <span class="island-info-total"><img src="/assets/home/home_user_number_icon.png" alt="">建造：${this.snapshot.data.totalPlaced}</span>

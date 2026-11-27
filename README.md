@@ -44,12 +44,13 @@ npm run preview
 - `src/game/audio/GameAudioManager.ts`：全局点击/不可点击音效、确认完成音效与岛屿循环 BGM；
 - `src/game/audio/audioAssets.ts`：全局音频路径与按钮音频优先级策略；
 - `src/game/map/mapConfig.ts`：三个稳定坐标阶段的正交 tile 数据；
-- `src/game/map/IslandMapRenderer.ts`：草地、沙地、岩地与物件分层渲染；
+- `src/game/map/IslandMapRenderer.ts`：固定 mask 地图与建筑 Y-Sort 渲染；
 - `src/game/map/IslandCameraController.ts`：自动适配、滚轮/按钮缩放、鼠标/触控平移与双指缩放；
 - `src/game/map/IslandExpansionService.ts`：可配置的累计 3/9 次扩岛阈值；
 - `src/game/storage.ts`：V1→V2 存档迁移、跨日计数重置；
-- `src/game/domain/placement.ts`：footprint、地形、越界、重叠与公共地标判断；
-- `src/game/data/assetCatalog.ts`：36 件后续素材的占格、地形和解锁批次目录；
+- `src/game/domain/placement.ts`：只按解锁 mask、footprint 与 `blocks_cell` 校验占位；
+- `src/game/domain/renderOrder.ts`：按 `baseY → layer_bias → 放置顺序` 的稳定 Y-Sort；
+- `src/game/data/rewardBuildings.ts`：64 件正式素材的 32px 占格、pivot、缩放、层级与阻挡配置；
 - `src/game/assets/placeholders.ts`：与正式美术解耦的程序占位纹理；
 - `public/assets/asset-manifest.json`：资源替换映射；
 - `assets-source/`：未来正式独立源文件目录，不进入网页加载路径。
@@ -63,7 +64,7 @@ npm run preview
 5. 将占位纹理工厂替换为 Phaser Loader 加载，但继续使用逻辑 ID；
 6. 对照 Art Bible 检查角色比例、六色、描边、透视和低刺激动效。
 
-岛屿页已使用用户提供的小伴龙、云朵、返回键和拉钩按钮切片；任务选择三步已使用正式 PNG 与 12 条 WAV；专注页已接入 8 张正式任务角色、浮岛、环境插画和按钮。庆祝角色及岛上建筑仍为程序占位，等待后续正式资源整合。
+岛屿页已使用用户提供的小伴龙、云朵、返回键和拉钩按钮切片；任务选择三步已使用正式 PNG 与 12 条 WAV；专注页已接入 8 张正式任务角色、浮岛、环境插画和按钮。岛上奖励建筑已接入 64 张正式透明 PNG，并统一使用配置表的 0.6 缩放与底边 pivot。
 
 ## P4 专注页 V2
 

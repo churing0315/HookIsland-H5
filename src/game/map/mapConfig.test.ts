@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { ASSET_CATALOG } from '../data/assetCatalog';
+import { REWARD_BUILDINGS } from '../data/rewardBuildings';
 import { MAP_STAGE_THRESHOLDS, stageForTotalPlaced } from './IslandExpansionService';
-import { getMapStageConfig, getTile } from './mapConfig';
+import { getMapStageConfig, getTile, gridToWorldAnchor, TILE_SIZE, worldToGrid } from './mapConfig';
 
 describe('island map stages', () => {
   it('only adds tiles as the island expands', () => {
@@ -14,10 +14,17 @@ describe('island map stages', () => {
     expect(stage1.tiles.every((tile) => stage2.tileKeys.has(tile.x + ',' + tile.y))).toBe(true);
   });
 
-  it('contains computed sand at upper left and rock at lower right', () => {
-    expect(getTile(2, 2, 2)?.terrain).toBe('sand');
-    expect(getTile(2, 18, 10)?.terrain).toBe('rock');
+  it('uses a boolean unlock mask without terrain types', () => {
+    expect(getTile(2, 2, 2)).toMatchObject({ x: 2, y: 2, unlockedAt: 2 });
+    expect(getTile(2, 18, 10)).toMatchObject({ x: 18, y: 10, unlockedAt: 2 });
     expect(getTile(1, 2, 2)).toBeUndefined();
+  });
+
+  it('round-trips the configured bottom-center anchor through grid snapping', () => {
+    const footprint = { width: 3, height: 1 };
+    const anchor = gridToWorldAnchor(8, 6, footprint);
+    expect(anchor).toEqual({ x: (8 + 1.5) * TILE_SIZE, y: 7 * TILE_SIZE });
+    expect(worldToGrid(anchor.x, anchor.y, footprint)).toEqual({ x: 8, y: 6 });
   });
 
   it('keeps configurable 3/9 cumulative expansion thresholds', () => {
@@ -27,9 +34,9 @@ describe('island map stages', () => {
     expect(stageForTotalPlaced(9)).toBe(2);
   });
 
-  it('tracks 36 replaceable assets with footprint and terrain metadata', () => {
-    expect(ASSET_CATALOG).toHaveLength(36);
-    expect(ASSET_CATALOG.some((asset) => asset.footprint.width === 4 && asset.footprint.height === 4)).toBe(true);
-    expect(ASSET_CATALOG.every((asset) => asset.allowedTerrains.length > 0)).toBe(true);
+  it('tracks all 64 configured assets on the 32px grid', () => {
+    expect(REWARD_BUILDINGS).toHaveLength(64);
+    expect(REWARD_BUILDINGS.every((asset) => asset.terrain[0] === 'unlocked')).toBe(true);
+    expect(new Set(REWARD_BUILDINGS.map((asset) => `${asset.footprint.width}x${asset.footprint.height}`))).toEqual(new Set(['1x1', '2x1', '3x1']));
   });
 });

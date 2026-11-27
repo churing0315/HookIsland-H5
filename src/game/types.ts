@@ -1,6 +1,5 @@
 export type Screen = 'island' | 'task-select' | 'ritual' | 'focus' | 'celebration' | 'build';
 export type MapStage = 0 | 1 | 2;
-export type TerrainType = 'grass' | 'sand' | 'rock';
 export type FocusMinutes = 5 | 10 | 15 | 20;
 
 export interface Footprint {

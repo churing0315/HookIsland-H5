@@ -1,4 +1,4 @@
-import type { Footprint, TerrainType } from '../types';
+import type { Footprint } from '../types';
 import { REWARD_BUILDINGS } from './rewardBuildings';
 
 export type AssetCategory = 'nature' | 'building' | 'facility' | 'animal';
@@ -9,10 +9,16 @@ export interface AssetCatalogEntry {
   name: string;
   category: AssetCategory;
   footprint: Footprint;
-  allowedTerrains: TerrainType[];
+  /** 旧目录兼容字段；v3 摆放逻辑不读取地形类型。 */
+  allowedTerrains?: string[];
   unlockBatch: UnlockBatch;
   runtimeTextureKey: string;
   runtimeStatus: 'placeholder' | 'ready';
+  pivotPx?: { x: number; y: number };
+  renderScale?: number;
+  layerBias?: number;
+  blocksCell?: boolean;
+  terrain?: readonly ['unlocked'];
 }
 
 const placeholder = 'placeholder-tree';
@@ -67,5 +73,6 @@ const REWARD_ASSETS = new Map(REWARD_BUILDINGS.map((building): [string, AssetCat
 ]));
 
 export function getAsset(assetId: string): AssetCatalogEntry {
-  return REWARD_ASSETS.get(assetId) ?? ASSET_CATALOG.find((asset) => asset.id === assetId) ?? ASSET_CATALOG[0];
+  const normalizedId = assetId.startsWith('reward-') ? assetId.slice('reward-'.length) : assetId;
+  return REWARD_ASSETS.get(normalizedId) ?? ASSET_CATALOG.find((asset) => asset.id === normalizedId) ?? ASSET_CATALOG[0];
 }

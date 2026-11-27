@@ -1,13 +1,12 @@
-import type { Footprint, MapStage, TerrainType } from '../types';
+import type { Footprint, MapStage } from '../types';
 
-export const TILE_SIZE = 44;
+export const TILE_SIZE = 32;
 export const MAP_COLUMNS = 22;
 export const MAP_ROWS = 14;
 
 export interface GridTile {
   x: number;
   y: number;
-  terrain: TerrainType;
   unlockedAt: MapStage;
 }
 
@@ -52,33 +51,33 @@ function isStage1(x: number, y: number): boolean {
   return true;
 }
 
-function stage2Terrain(x: number, y: number): TerrainType | null {
-  if (isStage1(x, y)) return 'grass';
+export function isStage2Beach(x: number, y: number): boolean {
+  return x >= 1 && x <= 6 && y >= 0 && y <= 5 && x + y >= 3 && x - y <= 5 && !isStage1(x, y);
+}
 
-  const beach = x >= 1 && x <= 6 && y >= 0 && y <= 5 && x + y >= 3 && x - y <= 5;
-  if (beach) return 'sand';
+function isStage2(x: number, y: number): boolean {
+  if (isStage1(x, y)) return true;
+  if (isStage2Beach(x, y)) return true;
 
   const rock = x >= 15 && x <= 21 && y >= 7 && y <= 13 && x + y <= 33 && y - x <= -3;
-  if (rock) return 'rock';
+  if (rock) return true;
 
   const outerGrass = x >= 3 && x <= 19 && y >= 1 && y <= 12;
-  if (outerGrass && !((x <= 4 || x >= 18) && (y <= 2 || y >= 11))) return 'grass';
-  return null;
+  return outerGrass && !((x <= 4 || x >= 18) && (y <= 2 || y >= 11));
 }
 
 const MASTER_TILES: GridTile[] = [];
 for (let y = 0; y < MAP_ROWS; y += 1) {
   for (let x = 0; x < MAP_COLUMNS; x += 1) {
     if (isStage0(x, y)) {
-      MASTER_TILES.push({ x, y, terrain: 'grass', unlockedAt: 0 });
+      MASTER_TILES.push({ x, y, unlockedAt: 0 });
       continue;
     }
     if (isStage1(x, y)) {
-      MASTER_TILES.push({ x, y, terrain: 'grass', unlockedAt: 1 });
+      MASTER_TILES.push({ x, y, unlockedAt: 1 });
       continue;
     }
-    const terrain = stage2Terrain(x, y);
-    if (terrain) MASTER_TILES.push({ x, y, terrain, unlockedAt: 2 });
+    if (isStage2(x, y)) MASTER_TILES.push({ x, y, unlockedAt: 2 });
   }
 }
 
@@ -125,10 +124,22 @@ export function gridToWorldCenter(
   };
 }
 
+/** PNG pivot 对齐的占地区域底边中点。 */
+export function gridToWorldAnchor(
+  gridX: number,
+  gridY: number,
+  footprint: Footprint = { width: 1, height: 1 },
+): { x: number; y: number } {
+  return {
+    x: (gridX + footprint.width / 2) * TILE_SIZE,
+    y: (gridY + footprint.height) * TILE_SIZE,
+  };
+}
+
 export function worldToGrid(worldX: number, worldY: number, footprint: Footprint = { width: 1, height: 1 }): { x: number; y: number } {
   return {
     x: Math.round(worldX / TILE_SIZE - footprint.width / 2),
-    y: Math.round(worldY / TILE_SIZE - footprint.height / 2),
+    y: Math.round(worldY / TILE_SIZE - footprint.height),
   };
 }
 

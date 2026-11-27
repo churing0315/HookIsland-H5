@@ -4,7 +4,7 @@ import { TASKS } from '../data/tasks';
 import { drawBuildingReward } from '../domain/buildingRewards';
 import { findNearestValidPlacement, validatePlacement } from '../domain/placement';
 import { effectiveMapStage, resolveStoredMapStage, unlockedTileSets } from '../map/IslandExpansionService';
-import { getMapStageConfig, gridToWorldCenter } from '../map/mapConfig';
+import { getMapStageConfig, gridToWorldAnchor } from '../map/mapConfig';
 import { loadGameData, saveGameData } from '../storage';
 import type { FocusMinutes, GameSnapshot, PlacedItem, StoredBuilding } from '../types';
 
@@ -128,7 +128,7 @@ export class GameFlow {
     const current = this.snapshot.data;
     const item = current.placedItems.find((building) => building.id === id);
     if (this.snapshot.screen !== 'island' || !item || !this.canMoveBuilding(item, gridX, gridY)) return false;
-    const center = gridToWorldCenter(gridX, gridY, item.footprint);
+    const center = gridToWorldAnchor(gridX, gridY, item.footprint);
     const data = {
       ...current,
       placedItems: current.placedItems.map((building) => building.id === id ? { ...item, ...center, gridX, gridY, flipped } : building),
@@ -177,10 +177,11 @@ export class GameFlow {
     }).valid) return;
 
     const asset = getAsset(assetId);
-    const center = gridToWorldCenter(gridX, gridY, asset.footprint);
+    const center = gridToWorldAnchor(gridX, gridY, asset.footprint);
     const { previouslyPlaced, unread: _unread, ...savedBuilding } = building;
     const placed: PlacedItem = {
       ...savedBuilding,
+      createdAt: new Date().toISOString(),
       type: asset.runtimeTextureKey,
       assetId,
       gridX,

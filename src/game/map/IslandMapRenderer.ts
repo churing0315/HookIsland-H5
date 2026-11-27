@@ -1,8 +1,10 @@
 import Phaser from 'phaser';
-import { placedAssetScale } from '../assets/placementDisplay';
+import { applyAssetDisplay } from '../assets/placementDisplay';
 import { getAsset } from '../data/assetCatalog';
-import type { MapStage, PlacedItem, TerrainType } from '../types';
-import { getMapStageConfig, gridToWorldCenter, MAP_COLUMNS, MAP_ROWS, TILE_SIZE } from './mapConfig';
+import { sortPlacedItemsForRender } from '../domain/renderOrder';
+import { isFootprintUnlocked } from '../domain/placement';
+import type { MapStage, PlacedItem } from '../types';
+import { getMapStageConfig, gridToWorldAnchor, isStage2Beach, MAP_COLUMNS, MAP_ROWS, TILE_SIZE } from './mapConfig';
 import { renderIsland, TileType } from './islandRenderer';
 
 export interface IslandBuildingSprite {
@@ -10,20 +12,14 @@ export interface IslandBuildingSprite {
   image: Phaser.GameObjects.Image;
 }
 
-/** 项目地形 → 演示渲染器地块类型的映射 */
-const TERRAIN_TO_TILE: Record<TerrainType, number> = {
-  grass: TileType.LAND,
-  sand: TileType.SAND,
-  rock: TileType.HIGH,
-};
-
 /** 把某阶段的 tile 配置转换为演示渲染器所需的二维格子地图（水域填 0） */
 function stageToGrid(stage: MapStage): number[][] {
   const grid: number[][] = Array.from({ length: MAP_ROWS }, () =>
     new Array<number>(MAP_COLUMNS).fill(TileType.WATER),
   );
   for (const tile of getMapStageConfig(stage).tiles) {
-    grid[tile.y][tile.x] = TERRAIN_TO_TILE[tile.terrain];
+    // 沙滩只影响绘制，建造继续使用同一份解锁 mask。
+    grid[tile.y][tile.x] = stage === 2 && isStage2Beach(tile.x, tile.y) ? TileType.SAND : TileType.LAND;
   }
   return grid;
 }
@@ -34,7 +30,7 @@ export class IslandMapRenderer {
     private readonly container: Phaser.GameObjects.Container,
   ) {}
 
-  render(stage: MapStage, items: PlacedItem[], alpha = 1, fixedSea = false): IslandBuildingSprite[] {
+  render(stage: MapStage, items: PlacedItem[], alpha = 1, fixedSea = false) {
     // 岛屿地块：轮廓海岸 + 圆角裁剪棋盘地形（替代原先的逐格圆角矩形拼贴）
     renderIsland(this.scene, this.container, stageToGrid(stage), MAP_COLUMNS, MAP_ROWS, {
       cellSize: TILE_SIZE,
@@ -42,20 +38,29 @@ export class IslandMapRenderer {
       fixedSea,
     });
 
-    return [...items]
-      .sort((a, b) => a.y - b.y)
+    const layer = this.scene.add.container(0, 0);
+    this.container.add(layer);
+    const landItems = items.filter((item) =>
+      isFootprintUnlocked(item.gridX, item.gridY, getAsset(item.assetId).footprint, stage));
+    const sprites = new Map(landItems
       .map((item) => {
         const asset = getAsset(item.assetId);
-        const center = gridToWorldCenter(item.gridX, item.gridY, asset.footprint);
+        const anchor = gridToWorldAnchor(item.gridX, item.gridY, asset.footprint);
         const image = this.scene.add
-          .image(center.x, center.y, asset.runtimeTextureKey)
+          .image(anchor.x, anchor.y, asset.runtimeTextureKey)
           .setAlpha(alpha)
-          .setFlipX(item.flipped === true)
-          .setDepth(center.y + 2);
-        image.setScale(placedAssetScale(asset, image.width, image.height));
+          .setFlipX(item.flipped === true);
+        applyAssetDisplay(image, asset);
         image.setData('placedItemId', item.id);
-        this.container.add(image);
-        return { item, image };
+        layer.add(image);
+        return [item.id, { item, image }] as const;
+      }));
+    const sort = (draft?: Pick<PlacedItem, 'id' | 'gridY'>): IslandBuildingSprite[] =>
+      sortPlacedItemsForRender(landItems, draft).map((item) => {
+        const sprite = sprites.get(item.id)!;
+        layer.bringToTop(sprite.image);
+        return sprite;
       });
+    return { sprites: sort(), sort };
   }
 }

@@ -32,8 +32,8 @@ export const FAST_MODE =
 
 function readDemoStage(): 0 | 1 | 2 | null {
   if (!FAST_MODE || typeof window === 'undefined') return null;
-  const value = Number(new URLSearchParams(window.location.search).get('mapStage'));
-  return value === 0 || value === 1 || value === 2 ? value : null;
+  const value = new URLSearchParams(window.location.search).get('mapStage');
+  return value === '0' || value === '1' || value === '2' ? Number(value) as 0 | 1 | 2 : null;
 }
 
 function readDemoZoom(): number | null {

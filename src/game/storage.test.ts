@@ -9,6 +9,9 @@ class MemoryStorage implements StorageLike {
   setItem(key: string, value: string): void {
     this.values.set(key, value);
   }
+  raw(key: string): string | null {
+    return this.getItem(key);
+  }
 }
 
 describe('V2 local persistence and migration', () => {
@@ -38,6 +41,9 @@ describe('V2 local persistence and migration', () => {
       mapVersion: 2,
     });
     saveGameData(data, storage);
+    expect(JSON.parse(storage.raw('lagou-island.prototype.v1')!).placedItems[0]).toEqual({
+      id: 'tree-1', asset_id: 'tree_round', gridX: 6, gridY: 5, placed_at: now.toISOString(),
+    });
     const restored = loadGameData(storage, now);
     expect(restored.version).toBe(2);
     expect(restored.placedItems[0].gridX).toBe(6);
@@ -68,6 +74,20 @@ describe('V2 local persistence and migration', () => {
     expect(migrated.placedItems).toHaveLength(1);
     expect(migrated.placedItems[0].legacyPosition).toEqual({ x: 406, y: 205 });
     expect(Number.isInteger(migrated.placedItems[0].gridX)).toBe(true);
+  });
+
+  it('returns saved buildings with any off-island footprint cell to storage', () => {
+    const data = normalizeGameData({
+      mapStage: 0,
+      totalPlaced: 2,
+      placedItems: [
+        { id: 'tree', asset_id: 'apple_tree', gridX: 8, gridY: 5 },
+        { id: 'house', asset_id: 'cottage', gridX: 15, gridY: 5 },
+      ],
+    });
+    expect(data.placedItems.map(({ id }) => id)).toEqual(['tree']);
+    expect(data.storedBuildings).toMatchObject([{ id: 'house', assetId: 'cottage', previouslyPlaced: true }]);
+    expect(data.totalPlaced).toBe(2);
   });
 
   it('round-trips daily counts above the disabled placement limit', () => {

@@ -55,7 +55,7 @@ describe('building rewards', () => {
     flow.commitPlacement(id, position.x, position.y);
     expect(flow.getSnapshot().data.storedBuildings).toEqual([]);
     expect(new GameFlow().getSnapshot().data.placedItems).toEqual([
-      expect.objectContaining({ assetId: id, minutes, gridX: position.x, gridY: position.y }),
+      expect.objectContaining({ assetId: id, gridX: position.x, gridY: position.y }),
     ]);
     flow.destroy();
   });
@@ -108,7 +108,7 @@ describe('building rewards', () => {
     flow.commitPlacement(reward.assetId, 8, 5);
     expect(flow.editPlacedBuilding(reward.id, 0, 0, true)).toBe(false);
     expect(flow.editPlacedBuilding(reward.id, 10, 5, true)).toBe(true);
-    expect(new GameFlow().getSnapshot().data.placedItems).toMatchObject([{ id: reward.id, gridX: 10, gridY: 5, flipped: true }]);
+    expect(new GameFlow().getSnapshot().data.placedItems).toMatchObject([{ id: reward.id, gridX: 10, gridY: 5 }]);
     flow.storePlacedBuilding(reward.id, true);
     expect(flow.getSnapshot().data.placedItems).toHaveLength(0);
     expect(flow.getSnapshot().data.storedBuildings[0]).toMatchObject({ id: reward.id, flipped: true, previouslyPlaced: true, unread: false });

@@ -32,9 +32,15 @@ describe('orthogonal footprint placement', () => {
     expect(validatePlacement({ assetId: 'tree_round', gridX, gridY, stage: 0, items: [] }).valid).toBe(true);
   });
 
-  it('enforces terrain constraints on stage 2 tiles', () => {
-    expect(validatePlacement({ assetId: 'tree_round', gridX: 2, gridY: 2, stage: 2, items: [] }).reason).toBe('wrong-terrain');
-    expect(validatePlacement({ assetId: 'beach_umbrella', gridX: 2, gridY: 2, stage: 2, items: [] }).valid).toBe(true);
-    expect(validatePlacement({ assetId: 'waterfall_rocks', gridX: 17, gridY: 9, stage: 2, items: [] }).valid).toBe(true);
+  it('only checks the unlocked mask, without terrain-type restrictions', () => {
+    expect(validatePlacement({ assetId: 'apple_tree', gridX: 2, gridY: 2, stage: 2, items: [] }).valid).toBe(true);
+    expect(validatePlacement({ assetId: 'rock_waterfall', gridX: 17, gridY: 9, stage: 2, items: [] }).valid).toBe(true);
+  });
+
+  it('ignores non-blocking decals when calculating occupied cells', () => {
+    const decal = { ...placed, assetId: 'picnic_mat', footprint: { width: 1, height: 1 }, gridX: 8, gridY: 5 };
+    expect(validatePlacement({ assetId: 'apple_tree', gridX: 8, gridY: 5, stage: 0, items: [decal] }).valid).toBe(true);
+    const blocker = { ...decal, assetId: 'apple_tree' };
+    expect(validatePlacement({ assetId: 'picnic_mat', gridX: 8, gridY: 5, stage: 0, items: [blocker] }).reason).toBe('overlap');
   });
 });

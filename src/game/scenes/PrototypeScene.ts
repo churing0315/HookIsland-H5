@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { fitAssetImage, placedAssetScale, PLACEMENT_PREVIEW, type PlacementFeedback } from '../assets/placementDisplay';
+import { applyAssetDisplay, fitAssetImage, PLACEMENT_PREVIEW, type PlacementFeedback } from '../assets/placementDisplay';
 import { createPlaceholderTextures } from '../assets/placeholders';
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { getAsset } from '../data/assetCatalog';
@@ -17,7 +17,7 @@ import { IslandCameraController } from '../map/IslandCameraController';
 import { IslandBuildingEditor } from '../map/IslandBuildingEditor';
 import { effectiveMapStage } from '../map/IslandExpansionService';
 import { IslandMapRenderer } from '../map/IslandMapRenderer';
-import { gridToWorldCenter, TILE_SIZE, worldToGrid } from '../map/mapConfig';
+import { gridToWorldAnchor, gridToWorldCenter, TILE_SIZE, worldToGrid } from '../map/mapConfig';
 import type { GameFlow } from '../state/GameFlow';
 import type { GameSnapshot, MapStage, PlacedItem } from '../types';
 
@@ -134,8 +134,8 @@ export class PrototypeScene extends Phaser.Scene {
   }
 
   private renderIsland(items: PlacedItem[], stage: MapStage, alpha = 1): void {
-    const sprites = this.prepareMap(stage, items, alpha);
-    this.buildingEditor = new IslandBuildingEditor(this, this.cameraController, this.flow, sprites);
+    const { sprites, sort } = this.prepareMap(stage, items, alpha);
+    this.buildingEditor = new IslandBuildingEditor(this, this.cameraController, this.flow, stage, sprites, sort);
   }
 
   private renderRitual(): void {
@@ -256,8 +256,7 @@ export class PrototypeScene extends Phaser.Scene {
       .setAlpha(0.72)
       .setVisible(false)
       .setDepth(10_000);
-    const ghostScale = placedAssetScale(asset, ghost.width, ghost.height);
-    ghost.setScale(ghostScale);
+    const ghostScale = applyAssetDisplay(ghost, asset);
     this.worldLayer.add([highlight, ghost]);
     this.input.setDraggable(candidate);
     let candidateGrid: { x: number; y: number } | null = null;
@@ -268,20 +267,20 @@ export class PrototypeScene extends Phaser.Scene {
       candidateGrid = null;
       candidateValid = false;
     });
-    candidate.on('drag', (_pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
+    candidate.on('drag', (pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
       candidate.setPosition(dragX, dragY);
-      const world = this.cameraController.screenToWorld(dragX, dragY);
+      const world = this.cameraController.screenToWorld(pointer.x, pointer.y);
       candidateGrid = worldToGrid(world.x, world.y, asset.footprint);
       const center = gridToWorldCenter(candidateGrid.x, candidateGrid.y, asset.footprint);
+      const anchor = gridToWorldAnchor(candidateGrid.x, candidateGrid.y, asset.footprint);
       const result = validatePlacement({ assetId, gridX: candidateGrid.x, gridY: candidateGrid.y, stage, items });
       candidateValid = result.valid;
-      ghost.setPosition(center.x, center.y).setVisible(true).setTint(result.valid ? 0xffffff : COLORS.invalid);
+      ghost.setPosition(anchor.x, anchor.y).setVisible(result.reason !== 'outside-map').setTint(result.valid ? 0xffffff : 0x7c8491);
       highlight.setPosition(center.x, center.y).setVisible(true).setFillStyle(result.valid ? 0x648d19 : 0xc6544b, 0.24);
       const position = { x: dragX, y: dragY };
       if (result.valid) updatePreview('松手即可建造', position);
-      else if (result.reason === 'wrong-terrain') updatePreview('这个物件不适合当前地形', position);
-      else if (result.reason === 'overlap') updatePreview('这里已有建筑', position);
-      else updatePreview('水域和岛外不能建造', position);
+      else if (result.reason === 'overlap') updatePreview('这里已有占位建筑', position);
+      else updatePreview('该格尚未解锁', null);
     });
     candidate.on('dragend', () => {
       this.cameraController.setInteractionLocked(false);
@@ -299,7 +298,16 @@ export class PrototypeScene extends Phaser.Scene {
         });
       } else {
         ghost.setVisible(false).clearTint();
-        candidate.setPosition(x, y);
+        const startX = candidate.x;
+        this.tweens.add({
+          targets: candidate,
+          x: startX + 5,
+          duration: 45,
+          yoyo: true,
+          repeat: 2,
+          onComplete: () => candidate.setPosition(x, y),
+        });
+        navigator.vibrate?.(24);
         updatePreview(null, PLACEMENT_PREVIEW);
       }
     });

@@ -387,10 +387,11 @@ export function renderIsland(
   const { cellSize: S, smoothIter, sandWidth, roughAmp, alpha } = o;
   const W = COLS * S, H = ROWS * S;
 
-  const landPred = (x: number, y: number) => grid[y][x] !== TileType.WATER;
-  const highPred = (x: number, y: number) => grid[y][x] === TileType.HIGH;
-  const grassPred = (x: number, y: number) => grid[y][x] === TileType.LAND;
-  const sandPred = (x: number, y: number) => grid[y][x] === TileType.SAND;
+  const tileAt = (x: number, y: number): number => grid[y]?.[x] ?? TileType.WATER;
+  const landPred = (x: number, y: number) => tileAt(x, y) !== TileType.WATER;
+  const highPred = (x: number, y: number) => tileAt(x, y) === TileType.HIGH;
+  const grassPred = (x: number, y: number) => tileAt(x, y) === TileType.LAND;
+  const sandPred = (x: number, y: number) => tileAt(x, y) === TileType.SAND;
 
   const landLoops = terrainLoops(grid, COLS, ROWS, landPred, smoothIter, roughAmp, S);
   const sandLoops = terrainLoops(grid, COLS, ROWS, sandPred, smoothIter, roughAmp, S);
@@ -449,21 +450,25 @@ export function renderIsland(
   // 相机 maxZoom = 1.6，SS = 2 可在最大放大时仍提供富余像素（贴图被降采样而非放大），
   // 避免 1:1 位图在 zoom > 1 时插值变糊。若日后调大 maxZoom，需同步提高 SS。
   const SS = 2;
+  const shoalWidth = 46;
+  const shoalBlur = 6;
+  // 阶段 2 的陆地贴到网格边界，给向外的海岸描边和模糊留出纹理空间。
+  const coastPadding = Math.ceil(Math.max(shoalWidth / 2 + 3 * shoalBlur, (sandWidth + 6) / 2) + roughAmp);
   const islandKey = 'island-tiles';
   if (scene.textures.exists(islandKey)) scene.textures.remove(islandKey);
-  const ct = scene.textures.createCanvas(islandKey, W * SS, H * SS);
+  const ct = scene.textures.createCanvas(islandKey, (W + 2 * coastPadding) * SS, (H + 2 * coastPadding) * SS);
   if (ct) {
     const ctx = ct.context;
     ctx.scale(SS, SS); // 之后所有绘制沿用世界坐标，自动放大 SS 倍（含 lineWidth / clip / 圆角）
-    ctx.clearRect(0, 0, W, H);
+    ctx.translate(coastPadding, coastPadding);
 
     // 海岸：嵌套描边（浅滩→泡沫→沙环）+ 沙色底
     for (const loop of landLoops) {
       const path = loopPath2D(loop, S);
       // 浅滩单独加高斯模糊：边缘向海面羽化融入海水（向岛内半边被沙色底/棋盘盖住）。
       // 泡沫、沙环保持锐利。老 Safari 不支持 ctx.filter 时自动降级为实线，不报错。
-      ctx.filter = 'blur(6px)';
-      strokeW(ctx, path, 46, rgba(TILE_COLORS.shoal, 0.8));
+      ctx.filter = `blur(${shoalBlur}px)`;
+      strokeW(ctx, path, shoalWidth, rgba(TILE_COLORS.shoal, 0.8));
       ctx.filter = 'none';
       strokeW(ctx, path, sandWidth + 6, hex(TILE_COLORS.foam));
       strokeW(ctx, path, sandWidth, hex(TILE_COLORS.sand));
@@ -481,6 +486,6 @@ export function renderIsland(
 
     ct.refresh();
   }
-  const island = scene.add.image(0, 0, islandKey).setOrigin(0, 0).setScale(1 / SS).setAlpha(alpha);
+  const island = scene.add.image(-coastPadding, -coastPadding, islandKey).setOrigin(0, 0).setScale(1 / SS).setAlpha(alpha);
   container.add(island);
 }
