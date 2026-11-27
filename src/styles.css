@@ -859,7 +859,7 @@ button {
   overflow: visible;
   border: 6px solid white;
   border-radius: 999px;
-  background: #fffdf3;
+  background: #6ad574;
   box-shadow: none;
   cursor: pointer;
   touch-action: none;
@@ -874,7 +874,7 @@ button {
   width: 57px;
   height: auto;
   transform: translate(-58%, -50%);
-  filter: brightness(0) saturate(100%) invert(17%) sepia(17%) saturate(916%) hue-rotate(338deg) brightness(91%) contrast(94%);
+  filter: brightness(0) invert(1);
   pointer-events: none;
 }
 
@@ -884,7 +884,7 @@ button {
   top: 50%;
   left: calc(50% + 32px);
   transform: translateY(-55%);
-  color: #392820;
+  color: white;
   font-size: 36px;
   font-weight: 1000;
   pointer-events: none;
@@ -921,16 +921,7 @@ button {
 }
 
 .task-v2-hold-button.is-complete {
-  background: #64d273;
   box-shadow: 0 0 0 5px rgba(148, 251, 72, 0.45);
-}
-
-.task-v2-hold-button.is-complete > img {
-  filter: none;
-}
-
-.task-v2-hold-button.is-complete .task-v2-hold-exclamation {
-  color: white;
 }
 
 .pact-ritual {

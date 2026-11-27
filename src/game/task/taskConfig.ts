@@ -38,6 +38,8 @@ export const TASK_ASSETS = {
   selectedSpot: `${ROOT}/card-selected-spot.png`,
   promptTask: `${ROOT}/prompt-task.png`,
   promptDuration: `${ROOT}/prompt-duration.png`,
+  promptTaskVoice: `${ROOT}/audio/task_audio_task.wav`,
+  promptDurationVoice: `${ROOT}/audio/task_audio_time.wav`,
   nextButton: `${ROOT}/button-next.png`,
   confirmPanel: `${ROOT}/confirm-panel.png`,
   confirmLabel: `${ROOT}/confirm-label.png`,
